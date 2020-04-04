@@ -1,0 +1,115 @@
+# MSYS2-specific setup
+
+######################################################
+#### Generate Visual Studio Environment variables ####
+######################################################
+
+# Generate $3 by calling $1 with $2, if $2 is newer than $3
+function vs_gen_if_newer() {
+      local prog="$1"
+      local src="$2"
+      local dst="$3"
+      if [[ ! -e "$dst" ]] || [[ "$src" -nt "$dst" ]] ; then
+        echo "Updating $src -> $dst"
+        "$prog" "$src" > "$dst"
+      fi
+}
+
+function vs64()
+{
+  [ -e ~/.zsh ] || mkdir ~/.zsh
+
+  PATH=$PRE_VS_PATH
+  export LIB=
+  export LIBPATH=
+  export INCLUDE=
+  export Platform=
+  export CommandPromptType=
+  # Windows specialties (cl.exe, msbuild.exe)
+  VSBASE="$(cygpath -u $VS140COMNTOOLS\\..\\..\\VC\\bin\\amd64)"
+  (cd $VSBASE && vs_gen_if_newer $V1ENV/zsh/win-extract-bat-env.py vcvars64.bat $HOME/.zsh/vs64_env)
+  . $HOME/.zsh/vs64_env
+
+  # Add QT:
+  local QT=$(ls -d /c/GuiEnv_v*_64|sort -n|tail -1)
+  if [ -e "$QT" ] ; then
+    (cd $QT && vs_gen_if_newer $V1ENV/zsh/win-extract-bat-env.py setup_qt_env.bat $HOME/.zsh/qt64_env)
+    . $HOME/.zsh/qt64_env
+  fi
+}
+
+# Add standard path elements:
+if [ -n "$WINDIR" ] ; then
+  export PRE_VS_PATH=$PATH
+  vs64
+fi
+
+# ConEmu is special, deal with that
+if [ -n "$ConEmuBuild" ] ; then
+  export EDITOR=/c/Program\ Files\ \(x86\)/Vim/vim74/vim.exe
+  alias vim=\"$EDITOR\"
+  unsetopt PROMPT_SP # against partial prompt sign appearing in ConEmu
+fi
+
+##############
+#### Path ####
+##############
+
+# kd.exe & co:
+path=($path "/c/Program Files (x86)/Windows Kits/10/Debuggers/x64/")
+
+# Use Git for Windows, it's a stripped-down version of MSYS2 that requires really special treatment.
+export GITDIR="/c/Program Files/Git/bin"
+[ -e $GITDIR ] && path=($path "$GITDIR")
+compdef -d git # Disable Git completion, it's unbearably slow on Windows
+
+[ -e "/c/Program Files (x86)/CMake/bin" ] && path=($path "/c/Program Files (x86)/CMake/bin")
+[ -e /c/D/dmd2 ] && path=($path /c/D/dmd2/windows/bin /c/D/dmd2/windows/bin64)
+
+
+#################
+#### Aliases ####
+#################
+
+# Not invented here, use equivalent:
+alias killall=pkill
+
+# For strange reasons, zsh doesn't complete over drive letter boundaries. Using $D instead of /d/ works, though.
+export C=/c/
+export D=/d/
+export E=/e/
+export E=/e/
+export F=/f/
+export G=/g/
+export U=/u/
+export V=/v/
+export W=/w/
+export X=/x/
+export Y=/y/
+export Z=/z/
+
+
+################
+#### Quirks ####
+################
+
+# Share SSH agent amonst MSYS2 terminals, the hard way
+SSH_ENV="$HOME/.ssh/environment"
+
+function start_ssh_agent {
+  echo "Spawning new SSH agent:"
+  [ -e "$SSH_ENV" ] || mkdir "$SSH_ENV"
+  /usr/bin/ssh-agent | sed 's/^echo/#echo/' > "${SSH_ENV}"
+  chmod 600 "${SSH_ENV}"
+  . "${SSH_ENV}" > /dev/null
+}
+
+if [ -f "${SSH_ENV}" ]; then
+  . "${SSH_ENV}" > /dev/null
+  ps -p ${SSH_AGENT_PID} | tail -1 | grep ssh-agent\$ > /dev/null || start_ssh_agent
+else
+  start_ssh_agent;
+fi
+
+# This is the best. MSYS2 doesn't start at $HOME. So, make it do this explicitly:
+cd $HOME

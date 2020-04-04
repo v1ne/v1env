@@ -1,0 +1,308 @@
+if [[ "$V1ENV" == "" ]]; then
+  echo "ERROR: V1ENV not defined. Please point it to this v1env/zsh/zshrc."
+fi
+
+. "$V1ENV/zsh/os"
+
+source_sh () {
+  emulate -LR sh
+  . "$@"
+}
+
+if [[ "$V1_LOAD_PROFILE" != "" || ( $V1OS == "Linux" && -e /etc/gentoo-release ) ]]; then
+  # Load default config for environment variables, path setup
+  source_sh /etc/profile
+fi
+
+
+####################
+###### Paths #######
+####################
+
+# Add standard path elements:
+amendedPath=
+for mybin in "${HOME}/bin" "$HOME/.local/bin"; do
+  if [[ -e $mybin && -z ${path[(r)$mybin]} ]] ; then
+    path=($mybin $path)
+    amendedPath=1
+  fi
+done
+if [[ "$amendedPath" != "" ]]; then
+  if [[ $V1OS == Linux ]]; then
+    # Linux has the tendency to cram useful tools in to sbin
+    path=($path /usr/sbin /sbin /bin)
+  fi
+fi
+
+
+####################
+##### Options ######
+####################
+
+# Set my options:
+setopt \
+  append_history auto_cd no_auto_list \
+  no_beep \
+  extended_glob \
+  hash_cmds hash_list_all hist_ignore_dups hist_ignore_space no_hup \
+  interactive_comments \
+  no_list_ambiguous list_types \
+  no_match \
+  no_notify \
+  rc_expand_param \
+  no_rm_star_silent \
+
+# Prompt:
+if [[ -n "$SSH_CONNECTION" ]] ; then
+  hostpart='%U%m%u:'
+else
+  hostpart=''
+fi
+PROMPT="$hostpart"'%(4~x...%B%3~x%B%~)%b %(0?:%#:%?!) '
+
+
+####################
+#### Completion ####
+####################
+
+autoload -U colors ; colors
+
+zstyle ':completion:*:default' list-colors ${(s.:.)LS_COLORS}
+
+[ -e ~/.zsh/cache ] || mkdir -p ~/.zsh/cache
+zstyle ':completion::complete:*' use-cache on
+zstyle ':completion::complete:*' cache-path ~/.zsh/cache/$HOST
+
+zstyle ':completion:*' expand 'yes' # /u/s/l^I -> /usr/src/linux
+zstyle ':completion:*' squeeze-slashes 'no' # don't remove trailing /
+
+zstyle ':completion:*' completer _complete _ignored
+zstyle ':completion:*' max-errors 0
+
+if [[ $V1OS == Linux ]]; then
+  zstyle ':completion:*:*:kill:*:processes' list-colors '=(#b) #([0-9]#)*=0=01;31'
+  zstyle ':completion:*:kill:*' command 'ps x'
+fi
+
+autoload -Uz compinit; compinit
+
+
+#############
+#### ZLE ####
+#############
+
+# non-alphanumeric characters considered parts of a word:
+# default: *?_-.[]~=/&;!#$%^(){}<>
+WORDCHARS='*?_-.[]~=/&;!#$%^(){}<>'
+_my_tiny_worchars=''
+
+backward-delete-tiny-word() {
+  local WORDCHARS="${_my_tiny_worchars}"
+  zle .backward-delete-word
+  # TODO: fooo -/bar^W^W deletes fooo, but shouldn't
+  # TODO: ] is missing in RE, how to escape this?
+  if [[ "${BUFFER[$CURSOR-1,CURSOR]}" =~ ' [*?_.~=/&;!#$%\^()\{\}<>-]' ]] then
+    # delete sole / argument
+    zle .vi-backward-delete-char
+  fi
+}
+zle -N backward-delete-tiny-word
+
+delete-tiny-word() {
+  local WORDCHARS="${_my_tiny_worchars}"
+  zle .delete-word
+}
+zle -N delete-tiny-word
+
+backward-tiny-word() {
+  local WORDCHARS="${_my_tiny_worchars}"
+  zle .backward-word
+}
+zle -N backward-tiny-word
+
+forward-tiny-word() {
+  local WORDCHARS="${_my_tiny_worchars}"
+  zle .forward-word
+}
+zle -N forward-tiny-word
+
+
+######################
+#### Key bindings ####
+######################
+
+autoload -U up-line-or-beginning-search
+zle -N up-line-or-beginning-search
+autoload -U down-line-or-beginning-search
+zle -N down-line-or-beginning-search
+
+bindkey -v
+if [[ "$TERM" =~ "^xterm" || "$TERM" =~ "^rxvt" || "$TERM" =~ "^screen" ]]; then
+  bindkey '^[Od' backward-tiny-word
+  bindkey '^[[1;5D' backward-tiny-word # C-left
+  bindkey '^[[1;6D' backward-word # C-S-left (broken on rxvt)
+  bindkey '^[[5D' backward-tiny-word
+  bindkey '^[Oc' forward-tiny-word
+  bindkey '^[[1;5C' forward-tiny-word # C-right
+  bindkey '^[[1;6C' forward-word # C-S-right (broken on rxvt)
+  bindkey '^[[5C' forward-tiny-word
+  bindkey '^[[H' beginning-of-line
+  bindkey '^A' beginning-of-line
+  bindkey '^[[1~' beginning-of-line
+  bindkey '^[[7~' beginning-of-line
+  bindkey '^E' end-of-line
+  bindkey '^[[F' end-of-line
+  bindkey '^[[8~' end-of-line
+  bindkey '^[[4~' end-of-line
+  bindkey '^[[3~' delete-char
+  bindkey '^[[A' up-line-or-beginning-search # up
+  bindkey '^[[B' down-line-or-beginning-search # down
+  bindkey '^[[Z' reverse-menu-complete # S-Tab reverses cycling
+  if [[ "$TERM" =~ "^xterm" ]]; then
+    bindkey '^[^W' backward-delete-word # C-A-W
+  fi
+else
+  echo "unknown terminal: $TERM; no special keys bound."
+fi
+bindkey -r "^[" # no vi-cmd-mode with ESC!
+bindkey '^[' beep # no vi-cmd-mode with ESC!
+bindkey '^Y' vi-cmd-mode # use ^Y for vi mode
+bindkey '^I' expand-or-complete-prefix # TAB: complete until cursor position...
+bindkey '^X^G' expand-word # expand word, not only list it like ^G
+bindkey '^Z' push-input # suspend current line on ^Z
+bindkey -r '^W'
+bindkey '^W' backward-delete-tiny-word
+bindkey '^[d' delete-tiny-word
+bindkey '^[D' delete-word
+
+# TODO: Use zshcontrib select-word-style?
+
+# csh dabbrev-expand for zsh: <3
+zstyle ':completion:history-words:*:history-words' stop yes
+zstyle ':completion:history-words:*:history-words' list no
+zstyle ':completion:history-words:*' remove-all-dups yes
+zstyle ':completion:history-words:*' menu no
+bindkey '\e/' _history-complete-older  # M-/
+bindkey '\e\\' _history-complete-newer # M-\
+#TODO: dabbrev-expand without /-Erweiterung (at the moment, M-/ needs to be pressed twice)
+
+# Force menu on ^X^I
+zle -C complete-first complete-word _generic
+zstyle ':completion:complete-first:*' menu yes select=1
+bindkey "^X^I" complete-first
+
+# Force file name completion on ^X^D
+zle -C complete-files complete-word _generic
+zstyle ':completion:complete-files:*' completer _files
+bindkey "^X^D" complete-files
+
+HISTFILE=~/.histfile
+HISTSIZE=2000
+SAVEHIST=2000
+
+## Prevent somethings to occur in the history:
+zshaddhistory() {
+  local line=${1%%$'\n'}
+  local cmd=${line%% *}
+
+  [[ ${cmd} != "youtube-dl" \
+  && ${cmd} != "youtube-watch" \
+  && ${cmd} != "mpv" \
+  && ${cmd} != "histrm" \
+  && ${cmd} != "pass" \
+  && ${line} != (*[^a-zA-Z0-9]Keys/*) \
+  ]]
+}
+
+
+#########################
+#########################
+### Shell Environment ###
+#########################
+#########################
+
+if [[ $V1OS == MSYS2 && "$amendedPath" != "" ]]; then
+  . "$V1ENV/zsh/win"
+fi
+
+
+####################
+##### Editor #######
+####################
+
+export COLORTERM=1
+
+# Set my preferences:
+export EDITOR=`which vim`
+export PAGER="less -FRX"
+
+if [[ $V1OS == Linux || $V1OS == MSYS2 ]]; then
+  COLORS="$V1ENV/dircolors/gnu-ls"
+  eval `dircolors --sh "$COLORS"`
+fi
+
+
+######################
+#### Localisation ####
+######################
+
+# German units etc., but English messages
+DE="de_DE.UTF-8"
+EN="en_US.UTF-8"
+unset LC_ALL
+export LANG=$EN
+export LANGUAGE=$EN
+export LC_CTYPE=$DE
+export LC_COLLATE=$DE
+export LC_MONETARY=$DE
+export LC_NUMERIC=$DE
+export LC_TIME=$DE
+export LC_MESSAGES=$EN
+# GNU extensions:
+LC_ADDRESS=$DE
+LC_IDENTIFICATION=$EN
+LC_MEASUREMENT=$DE
+LC_NAME=$DE
+LC_PAPER=$DE
+LC_TELEPHONE=$DE
+
+
+
+#########################
+#### Command Aliases ####
+#########################
+
+# colorful ls:
+if [[ $V1OS == Linux || $V1OS == MSYS2 ]]; then
+  alias ls='LC_COLLATE=C /bin/ls --color=auto'
+  alias lsx='LC_COLLATE=C /bin/ls -X --color=auto'
+  alias lsl='LC_COLLATE=C /bin/ls -l --color=auto'
+  # That would be nice, but it also groups directories first with -t, which is silly:
+  #alias ls='LC_COLLATE=C /bin/ls --color=auto --group-directories-first'
+  #alias lsx='LC_COLLATE=C /bin/ls -X --color=auto --group-directories-first'
+  #alias lsl='LC_COLLATE=C /bin/ls -l --color=auto --group-directories-first'
+elif [[ $V1OS == FreeBSD ]]; then
+  alias ls='/bin/ls -G '
+fi
+
+alias ..="cd .."
+alias ...="cd ../.."
+alias ....="cd ../../.."
+alias .....="cd ../../../.."
+alias ......="cd ../../../../.."
+alias .......="cd ../../../../../.."
+
+if [[ $V1OS == Linux || $V1OS == MSYS2 ]]; then
+  alias tar=bsdtar
+  compdef _tar bsdtar=tar
+fi
+
+if [[ $V1OS == Linux ]]; then
+  alias emerge='emerge --nospinner'
+fi
+
+alias lvared="IFS=\$'\n' vared" # vared with one line per entry for arrays
+alias lvim='vim *(.om[1]^D)' # edit newest file (excluding dot files)
+
+# Treat ^,#,~ normally
+unsetopt EXTENDED_GLOB

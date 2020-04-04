@@ -1,0 +1,10 @@
+if [ -e /sbin/camcontrol ]; then
+  V1OS="FreeBSD"
+elif [ -e "/c/" ]; then # also has /proc/version, check first
+  V1OS="MSYS2"
+elif [ -e /proc/version ]; then
+  V1OS="Linux"
+else
+  V1OS="unknown"
+  echo "ERROR: V1ENV/zsh/os: Unknown operating system"
+fi
