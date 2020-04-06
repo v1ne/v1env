@@ -1,0 +1,123 @@
+[core]
+  eol = lf
+  fscache = true
+  whitespace = tab-in-indent,tabwidth=2
+
+[advice]
+  detachedHead = false
+[diff]
+  tool = meld
+  compactionHeuristic = 1
+[diff "utf16text"]
+  textconv = "iconv -f utf-16 -t utf-8"
+[gc]
+  auto = 0
+[gui]
+  commitmsgwidth = 80
+  gcwarning = false
+  encoding = utf-8
+[fetch]
+  parallel = 24
+[merge]
+  conflictstyle = diff3
+  tool = meld
+  renamelimit = 10000
+[submodule]
+  fetchJobs = 24
+
+[alias]
+  # Auto-Fixup
+  af = !"${V1ENV}/git/auto-fixup.d"
+
+  # Branch
+  ba = branch -a
+  bac = branch -a --contains
+
+  # Commit
+  c = commit
+  ca = commit --amend --no-edit
+  cap = commit --amend --no-edit .
+  cf = commit --fixup
+
+  current-branch = rev-parse --abbrev-ref HEAD
+  co = checkout
+
+  # Cherry-pick
+  cp = cherry-pick
+  cpa = cherry-pick --abort
+  cpc = cherry-pick --continue
+
+  # Diff
+  dh = diff --word-diff=color
+  do = !git dh origin/`git rev-parse --abbrev-ref HEAD`..HEAD
+  dom = !git dh origin/master..HEAD
+  dor = !git diff origin/`git rev-parse --abbrev-ref HEAD`..HEAD
+  domr = !git diff origin/master..HEAD
+
+  # Fetch
+  fp = fetch --prune --recurse-submodules=on-demand
+  fpq = fetch --prune --recurse-submodules=on-demand -q
+  fetch-only-current-branch = !git fetch --recurse-submodules=on-demand `git rev-parse --symbolic-full-name --abbrev-ref @{upstream} | sed 's!/! !'`
+
+  # Log
+  lt = log --format='%h %s'
+  lg = log --color --graph --pretty=format:'%Cred%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%cr)%C(bold blue)<%an>%Creset' --abbrev-commit
+  lmh = log origin/master..HEAD
+  lhm = log HEAD..origin/master
+
+  # Merge
+  ma = merge --abort
+  mt = mergetool -y
+  # Show Merged Branches
+  show-merged = !git branch --merged master | grep -v 'master$'
+  # Delete Merged Branches
+  delete-merged = !git branch --merged | grep -vE \"\\*|master|dev\" | xargs -rn 1 git branch -d
+
+  # Pull
+  pr = pull --rebase
+
+  # Push
+  # Push to Origin, starts tracking branch on remote side
+  pto = !git push -u origin `git rev-parse --abbrev-ref HEAD`
+  puf = push --force-with-lease
+
+  # Rebase
+  r = rebase
+  # Rechtsanwalt
+  ra = rebase --abort
+  rc = rebase --continue
+  ri = rebase -i
+  ria = rebase -i --autosquash
+  # Rebase Current Branch
+  rcb = "!${V1ENV}/git/rebase-current-branch.d"
+  rcba = "!${V1ENV}/git/rebase-current-branch.d" --autosquash
+  rom = rebase origin/master
+  room = rebase --onto=origin/master origin/master
+  roomi = rebase -i --onto=origin/master origin/master
+
+  # Reset
+  # Reset HEAD to origin (reset local branch to remote branch)
+  rho = !git reset --hard origin/`git rev-parse --abbrev-ref HEAD`
+  # Reset Other Branch (resets HEAD of $1 to $2)
+  rob = branch -f
+
+  # Status
+  s = status
+  ss = status -uno --ignore-submodules=all
+
+  # Spawn a Git server for the current repo
+  serve = "!f() { cwdnm=$(basename $(pwd)); echo Your git url is: git://$(hostname)/$cwdnm; git daemon --export-all --verbose --disable=receive-pack --base-path=.. ../$cwdnm; }; f"
+
+  # Compact show, like "dh"
+  sh = show --word-diff=color
+
+  # Submodule magic
+  smb = submodule foreach
+  smuri = submodule update --recursive --init
+  # Parallel submodule update, checks all registered submodules
+  psmuri = !grep 'path *=' .gitmodules  | sed 's/^[^=]*path *= *//' | tr '\\n' '\\0' | xargs -0rn1 -P16 git submodule update --init --recursive
+  # Update Modified Submodules: Only tracks modified submodules, no add/remove
+  ums = !git status | grep 'modified:.*new commits' | sed 's/^[^m]*modified: *  *\\([^   ].*\\) ([a-z][^)]*)$/\\1/' | tr '\\n' '\\0' | xargs -0rn1 -P16 git submodule update --init --recursive # update modified submodules
+
+  # Final rebase before merging
+  update-before-merge = !git fp && git room --autosquash && git puf
