@@ -1,0 +1,126 @@
+if &t_Co > 1 || has("gui_running")
+  syntax on
+  set termguicolors
+  set background=dark
+  colorscheme gruvbox
+  set number
+endif
+
+if has("gui_running")
+  set guifont=Lucida_Console:h9:cDEFAULT
+  set guicursor=a:blinkon0
+  set guioptions=bgmprT
+  set encoding=utf-8
+endif
+
+set tabstop=2
+set expandtab
+set shiftwidth=2
+au FileType python setl ts=4 sw=4 et
+
+set backspace=indent,eol,start
+set nolist
+set listchars=tab:\|-,trail:#
+set showmatch
+set linebreak
+set ruler
+" Nope, only a single space after a sentence ends:
+set cpoptions-=J
+set nojoinspaces
+
+" DO NOT WRAP LINES AUTOMATICALLY
+set textwidth=0 wrapmargin=0
+
+set showcmd
+set history=256
+set viminfo='100,\"256
+set autoindent
+
+set hlsearch
+set incsearch
+
+set tw=0
+
+" Space == next page
+nmap <Space> 
+
+" <F10> = toggle match highlighting
+nmap <F10> :set hls!<CR>
+
+" Suppress all spaces at end/beginning of lines
+nmap _s :%s/\s\+$//<CR>
+nmap _S :%s/^\s\+//<CR>
+nmap _v :%s/^\s+$//<CR>
+
+" quick toggle paste mode
+set pastetoggle=qP
+
+" Shift-Up,Down,Home,End: Move inside wrapped lines
+inoremap <buffer> <silent> <S-Up>   <C-o>gk
+inoremap <buffer> <silent> <S-Down> <C-o>gj
+inoremap <buffer> <silent> <S-Home> <C-o>g<Home>
+inoremap <buffer> <silent> <S-End>  <C-o>g<End>
+
+" :sudow: sudo write a file (resets permissions?)
+cnoremap sudow w !sudo tee % >/dev/null
+
+" highlight too long lines
+"autocmd BufWinEnter *.c let w:m2=matchadd('ErrorMsg', '\%>80v.\+', -1)
+"autocmd BufWinLeave *.c call matchdelete(w:m2)
+
+" permanently highlight 80th column
+" set colorcolumn=80
+
+" highlight trailing whitespace and tabs after spaces in leading whitespace
+highlight ExtraWhitespace ctermbg=red guibg=red
+autocmd BufWinEnter *.c match ExtraWhitespace /^\s* 	\|\s\+$/
+autocmd InsertEnter *.c match ExtraWhitespace /^\s* 	\|\s\+\%#\@<!$/
+autocmd InsertLeave *.c match ExtraWhitespace /^\s* 	\|\s\+$/
+autocmd BufWinLeave *.c call clearmatches()
+
+" Sort words of a line
+command! -nargs=0 -range SortLine <line1>,<line2>call setline('.',join(sort(split(getline('.'),' ')),' '))
+
+" ex command for toggling hex mode
+command -bar Hexmode call ToggleHex()
+
+" helper function to toggle hex mode
+function ToggleHex()
+  " hex mode should be considered a read-only operation
+  " save values for modified and read-only for restoration later,
+  " and clear the read-only flag for now
+  let l:modified=&mod
+  let l:oldreadonly=&readonly
+  let &readonly=0
+  let l:oldmodifiable=&modifiable
+  let &modifiable=1
+  if !exists("b:editHex") || !b:editHex
+    " save old options
+    let b:oldft=&ft
+    let b:oldbin=&bin
+    " set new options
+    setlocal binary " make sure it overrides any textwidth, etc.
+    silent :e " this will reload the file without trickeries
+              "(DOS line endings will be shown entirely )
+    let &ft="xxd"
+    " set status
+    let b:editHex=1
+    " switch to hex editor
+    %!xxd
+  else
+    " restore old options
+    let &ft=b:oldft
+    if !b:oldbin
+      setlocal nobinary
+    endif
+    " set status
+    let b:editHex=0
+    " return to normal editing
+    %!xxd -r
+  endif
+  " restore values for modified and read only state
+  let &mod=l:modified
+  let &readonly=l:oldreadonly
+  let &modifiable=l:oldmodifiable
+endfunction
+

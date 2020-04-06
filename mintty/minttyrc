@@ -1,0 +1,12 @@
+BoldAsFont=-1
+CursorType=block
+CursorBlinks=no
+ThemeFile=solarized-light.minttyrc
+Font=Lucida Console
+FontSmoothing=default
+Locale=de_DE
+Charset=UTF-8
+Term=xterm-256color
+BellType=-1
+BellFreq=1500
+BellLen=100
