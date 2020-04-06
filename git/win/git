@@ -1,0 +1,31 @@
+#!/bin/sh
+# Run Git for Windows (MINGW64) in an MSYS2 environment
+# Git for Windows is faster than MSYS2 git, it's worth jumping through
+# these hoops.
+
+# If installed in MSYS2 (caveat emptor, now you have 3 things called "git"
+# in your path), display help as man pages.
+if [ "$1" = "help" -a -e /usr/bin/git ] ; then
+  shift
+  exec /usr/bin/git help "$@"
+fi
+
+# Ensure that Git for Windows comes before any installed MSYS2 /usr/bin/git
+export PATH=/c/Python27:/c/Program\ Files/Git/bin/:$PATH
+
+# SSH needs translation of the agent path
+export GIT_SSH=_git-ssh
+
+# MINGW64 has a different base path than MSYS2
+export V1ENV=$(echo "$V1ENV" | sed 's#^/\([^/][^/]*\)/#/c/msys64/\1/#')
+
+# In non-interactive sessions, don't use winpty
+if [ ! -t 0 -o ! -t 1 ]; then
+  exec git "$@"
+fi
+
+# Force to use WINEDITOR (a graphical editor, not a console program!) to
+# save use from adapting between the MSYS2 (terminal) and MINGW64 (Git for
+# Windows) worlds. Use a shell script trampoline because direct execution
+# doesn't work (sigh). Use winpty to make ^C work (GfW is not a MSYS2 program).
+exec env GIT_EDITOR="win-git-editor" winpty git "$@"

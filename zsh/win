@@ -58,14 +58,14 @@ fi
 # kd.exe & co:
 path=($path "/c/Program Files (x86)/Windows Kits/10/Debuggers/x64/")
 
-# Use Git for Windows, it's a stripped-down version of MSYS2 that requires really special treatment.
+# Use Git for Windows, it's a stripped-down version of MSYS64 that requires special treatment.
+# The supplied wrapper "git" script will call GfW in the end, but ensure that SSH and the editor works.
 export GITDIR="/c/Program Files/Git/bin"
-[ -e $GITDIR ] && path=($path "$GITDIR")
+[ -e $GITDIR ] && path=($V1ENV/git/win "$GITDIR" $path)
 compdef -d git # Disable Git completion, it's unbearably slow on Windows
 
 [ -e "/c/Program Files (x86)/CMake/bin" ] && path=($path "/c/Program Files (x86)/CMake/bin")
 [ -e /c/D/dmd2 ] && path=($path /c/D/dmd2/windows/bin /c/D/dmd2/windows/bin64)
-
 
 #################
 #### Aliases ####
@@ -110,6 +110,9 @@ if [ -f "${SSH_ENV}" ]; then
 else
   start_ssh_agent;
 fi
+
+# Git for Windows needs a non-console editor, supply one
+export WINEDITOR="$(find '/c/Program Files (x86)/Vim/' -mindepth 1 -maxdepth 1 -type d | grep -i 'vim[0-9]' | sort -n | tail -1)/gvim.exe"
 
 # This is the best. MSYS2 doesn't start at $HOME. So, make it do this explicitly:
 cd $HOME

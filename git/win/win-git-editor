@@ -1,0 +1,5 @@
+#!/bin/sh
+# Trampoline to execute $WINEDITOR when calling a Win32 binary directly
+# from MSYS64 Git doesn't work.
+
+exec "$WINEDITOR" "$@"

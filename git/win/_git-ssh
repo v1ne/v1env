@@ -1,0 +1,11 @@
+#!/bin/sh
+
+# Translate all paths like /tmp/foo and w:/Temp/foo to where the ssh-agent
+# socket really is: in msys' /tmp. The path translation occurs when winpty
+# is used or if it is not used but Git later on calls us.
+MSYS=/c/msys64
+if ! [ -e "$SSH_AUTH_SOCK" ] ; then
+  SSH_AUTH_SOCK=$(echo "$SSH_AUTH_SOCK" | sed "s#.*/\\(ssh-.*\\)\$#$MSYS/tmp/\\1#" )
+
+fi
+exec ssh "$@"
