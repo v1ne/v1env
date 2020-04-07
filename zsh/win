@@ -60,8 +60,9 @@ path=($path "/c/Program Files (x86)/Windows Kits/10/Debuggers/x64/")
 
 # Use Git for Windows, it's a stripped-down version of MSYS64 that requires special treatment.
 # The supplied wrapper "git" script will call GfW in the end, but ensure that SSH and the editor works.
-export GITDIR="/c/Program Files/Git/bin"
-[ -e $GITDIR ] && path=($V1ENV/git/win "$GITDIR" $path)
+export GITDIR="/c/Program Files/Git"
+[ -e $GITDIR/bin ] && path=($V1ENV/git/win "$GITDIR/bin" $path)
+[ -e $GITDIR/mingw64 ] && path=($path "$GITDIR/mingw64/bin")
 compdef -d git # Disable Git completion, it's unbearably slow on Windows
 
 [ -e "/c/Program Files (x86)/CMake/bin" ] && path=($path "/c/Program Files (x86)/CMake/bin")
