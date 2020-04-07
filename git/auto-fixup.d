@@ -288,9 +288,16 @@ int createFixup(const ref Parameters parms, FileInfo fileInfo, CommitHashAndTitl
   if(parms.dryRun) {
     writeln("Would create fixup for base commit ", baseCommitString);
   } else {
-    auto result = executeGitCmd(["commit", "--fixup=" ~ baseCommits[0].hash] ~
-      (fileInfo.useStaged ? [] : fileInfo.files)).front;
-    auto fixupHash = result[result.indexOf(' ') + 1 .. result.indexOf(']')];
+    auto result = executeGitCmd(
+      ["commit", "--fixup=" ~ baseCommits[0].hash] ~ (fileInfo.useStaged ? [] : fileInfo.files));
+    auto hashLines = result.filter!(line => line.startsWith('[')).array;
+    if(hashLines.length != 1) {
+      stdout.flush();
+      stderr.writeln("Unexpected output from Git: " ~ result.join(std.ascii.newline));
+      exit(1);
+    }
+    auto hashLine = hashLines.front;
+    auto fixupHash = hashLine[hashLine.indexOf(' ') + 1 .. hashLine.indexOf(']')];
     writeln("Created fixup ", fixupHash, " for base commit ", baseCommitString);
   }
 
