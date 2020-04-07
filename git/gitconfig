@@ -28,6 +28,10 @@
 [alias]
   # Auto-Fixup
   af = !"${V1ENV}/git/auto-fixup.d"
+  # Auto-Rebase
+  ar = !"${V1ENV}/git/auto-rebase.d"
+  # Auto-Rebase, Auto-Squash
+  ara = !"${V1ENV}/git/auto-rebase.d" -a
 
   # Branch
   ba = branch -a
