@@ -83,6 +83,9 @@
   # Push
   # Push to Origin, starts tracking branch on remote side
   pto = !git push -u origin `git rev-parse --abbrev-ref HEAD`
+  # Push to Remote ($1), starts tracking branch on remote side
+  ptr = "!f() { git push -u $1 `git rev-parse --abbrev-ref HEAD`; }; f"
+  # Push with a bit of force
   puf = push --force-with-lease
 
   # Rebase
