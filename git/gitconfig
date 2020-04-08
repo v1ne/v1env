@@ -128,3 +128,4 @@
 
   # Final rebase before merging
   update-before-merge = !git fp && git room --autosquash && git puf
+  pull-rebase-push = !git pull --rebase && git push
