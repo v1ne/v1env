@@ -1,0 +1,241 @@
+# i3 config file (v4)
+#
+# Please see https://i3wm.org/docs/userguide.html for a complete reference!
+
+set $mod Mod1
+
+# font for window titles. ISO 10646 = Unicode
+font -misc-fixed-medium-r-normal--13-120-75-75-C-70-iso10646-1
+# TTF alternative, for HiDPI displays
+#font pango:DejaVu Sans Mono 8
+
+# Use Mouse+$mod to drag floating windows to their wanted position
+floating_modifier $mod
+
+
+# Options: Use alt+num to switch back where we came from
+workspace_auto_back_and_forth yes
+force_display_urgency_hint 500 ms
+
+# start a terminal
+bindsym $mod+Return exec xterm -title fxterm
+bindsym $mod+Shift+Return exec xterm
+#bindsym $mod+Return exec urxvt -title furxvt
+#bindsym $mod+Shift+Return exec urxvt
+bindsym $mod+Ctrl+Return exec urxvt -name URxvtD -title furxvt
+bindsym $mod+Ctrl+Shift+Return exec urxvt -name URxvtD
+
+# kill focused window
+bindsym $mod+q kill
+
+# start dmenu (a program launcher)
+bindsym $mod+less exec --no-startup-id j4-dmenu-desktop
+
+# change focus
+bindsym $mod+j focus left
+bindsym $mod+k focus down
+bindsym $mod+l focus up
+bindsym $mod+odiaeresis focus right
+
+# move focused window
+bindsym $mod+Ctrl+j move left
+bindsym $mod+Ctrl+k move down
+bindsym $mod+Ctrl+l move up
+bindsym $mod+Ctrl+odiaeresis move right
+
+# split in horizontal orientation
+bindsym $mod+h split h
+
+# split in vertical orientation
+bindsym $mod+v split v
+
+# enter fullscreen mode for the focused container
+bindsym $mod+f fullscreen toggle
+
+# change container layout (stacked, tabbed, toggle split)
+bindsym $mod+s layout stacking
+bindsym $mod+w layout tabbed
+bindsym $mod+e layout toggle split
+
+# toggle tiling / floating
+bindsym $mod+Ctrl+space floating toggle
+
+# change focus between tiling / floating windows
+bindsym $mod+space focus mode_toggle
+
+# focus the parent container
+bindsym $mod+a focus parent
+
+# focus the child container
+#bindsym $mod+d focus child
+
+# jump to latest urgent window
+bindsym $mod+u [urgent="latest"] focus
+
+# change workspace
+bindsym $mod+Ctrl+Left workspace prev_on_output
+bindsym $mod+Ctrl+Right workspace next_on_output
+
+# move workspaces
+bindsym $mod+Shift+j move workspace to output left
+bindsym $mod+Shift+k move workspace to output down
+bindsym $mod+Shift+l move workspace to output up
+bindsym $mod+Shift+odiaresis move workspace to output right
+
+# switch to workspace
+bindcode $mod+49 workspace 0
+bindsym $mod+1 workspace 1
+bindsym $mod+2 workspace 2
+bindsym $mod+3 workspace 3
+bindsym $mod+4 workspace 4
+bindsym $mod+5 workspace 5
+bindsym $mod+6 workspace 6
+bindsym $mod+7 workspace 7
+bindsym $mod+8 workspace 8
+bindsym $mod+9 workspace 9
+bindsym $mod+0 workspace 10
+bindcode $mod+20 workspace 11
+bindcode $mod+21 workspace 12
+
+# move focused container to workspace
+bindcode $mod+Ctrl+49 move container to workspace 0
+bindsym $mod+Ctrl+1 move container to workspace 1
+bindsym $mod+Ctrl+2 move container to workspace 2
+bindsym $mod+Ctrl+3 move container to workspace 3
+bindsym $mod+Ctrl+4 move container to workspace 4
+bindsym $mod+Ctrl+5 move container to workspace 5
+bindsym $mod+Ctrl+6 move container to workspace 6
+bindsym $mod+Ctrl+7 move container to workspace 7
+bindsym $mod+Ctrl+8 move container to workspace 8
+bindsym $mod+Ctrl+9 move container to workspace 9
+bindsym $mod+Ctrl+0 move container to workspace 10
+bindcode $mod+Ctrl+20 move container to workspace 11
+bindcode $mod+Ctrl+21 move container to workspace 12
+
+# mod + -/_
+bindcode $mod+Shift+61 move scratchpad
+bindcode $mod+61 scratchpad show
+
+# reload the configuration file
+bindsym $mod+Shift+c reload
+# restart i3 inplace (preserves your layout/session, can be used to upgrade i3)
+bindsym $mod+Shift+r restart
+# exit i3 (logs you out of your X session)
+bindsym $mod+Shift+e exec "i3-nagbar -t warning -m 'You pressed the exit shortcut. Do you really want to exit i3? This will end your X session.' -b 'Yes, exit i3' 'i3-msg exit'"
+
+# resize window (you can also use the mouse for that)
+mode "resize" {
+        # These bindings trigger as soon as you enter the resize mode
+
+        # Pressing left will shrink the window’s width.
+        # Pressing right will grow the window’s width.
+        # Pressing up will shrink the window’s height.
+        # Pressing down will grow the window’s height.
+        bindsym j resize shrink width 10 px or 10 ppt
+        bindsym k resize grow height 10 px or 10 ppt
+        bindsym l resize shrink height 10 px or 10 ppt
+        bindsym odiaeresis resize grow width 10 px or 10 ppt
+        bindsym Shift+j resize shrink width 1 px or 1 ppt
+        bindsym Shift+k resize grow height 1 px or 1 ppt
+        bindsym Shift+l resize shrink height 1 px or 1 ppt
+        bindsym Shift+odiaeresis resize grow width 1 px or 1 ppt
+
+        # same bindings, but for the arrow keys
+        bindsym Left resize shrink width 10 px or 10 ppt
+        bindsym Down resize grow height 10 px or 10 ppt
+        bindsym Up resize shrink height 10 px or 10 ppt
+        bindsym Right resize grow width 10 px or 10 ppt
+        bindsym Shift+Left resize shrink width 1 px or 1 ppt
+        bindsym Shift+Down resize grow height 1 px or 1 ppt
+        bindsym Shift+Up resize shrink height 1 px or 1 ppt
+        bindsym Shift+Right resize grow width 1 px or 1 ppt
+
+
+        # back to normal: Enter or Escape
+        bindsym Return mode "default"
+        bindsym Escape mode "default"
+        bindsym Caps_Lock mode "default"
+}
+
+bindsym $mod+r mode "resize"
+
+# Verbatim mode: Forward everything to the focussed program 
+mode "verbatim" {
+	bindsym Super_L mode default
+}
+
+bindsym Super_L mode "verbatim"
+
+bar {
+	# output default	
+	mode dock
+	position bottom
+	status_command i3status
+	tray_output primary
+}
+
+#bar {
+#	output DP-0
+#	mode hide
+#	position top
+#	modifier Mod1
+#	tray_output none
+#}
+
+##########################
+## hotkeys
+##########################
+
+
+bindsym XF86ScreenSaver exec --no-startup-id i3lock
+bindsym XF86AudioRaiseVolume exec --no-startup-id pactl set-sink-volume @DEFAULT_SINK@ +5%
+bindsym XF86AudioLowerVolume exec --no-startup-id pactl set-sink-volume @DEFAULT_SINK@ -5%
+bindsym XF86AudioMute exec --no-startup-id pactl set-sink-mute @DEFAULT_SINK@ toggle
+#bindsym XF86AudioMicMute exec --no-startup-id pactl set-source-mute @DEFAULT_SOURCE@ toggle
+
+##############################################################################
+## program quirks
+##############################################################################
+
+# always float pop-ups
+for_window [window_role="^pop-up$"] floating enable
+
+# xterm magic
+# goal:
+# - float new float xterms
+for_window [class="^XTerm$"] border pixel 2
+for_window [class="^URxvt$"] border pixel 2
+for_window [class="^XTerm$" title="^fxterm$"] border pixel 2
+for_window [class="^URxvt$" title="^furxvt$"] border pixel 2
+for_window [class="^XTerm$"  title="^fxterm$"] floating enable
+for_window [class="^URxvt$" title="^furxvt$"] floating enable
+
+# gkrellm: always float
+for_window [class="^Gkrellm$"] border none
+for_window [class="^Gkrellm$"] floating enable
+
+# Psi
+for_window [class="^psi\+$" instance="^event$"] floating enable
+for_window [class="^psi\+$" instance="^event$"] floating enable
+for_window [class="^psi\+$" title="^Transfermanager$"] floating enable
+
+## Firefox – dumm hoch drei. -_- Gibt nicht heraus, um was für ein Fenster es sich handelt
+#for_window [class="^Firefox$"] floating enable
+
+# media players, of course
+for_window [class="^MPlayer$"] floating enable
+for_window [class="^MPlayer$"] border 1pixel
+for_window [class="^mpv$"] floating enable
+for_window [class="^mpv$"] border 1pixel
+
+# Akregator:
+# - immer auf WS4
+assign [class="^Akregator$"] → 4
+
+# more floating
+for_window [class="^Gnuplot_qt$"] floating enable
+for_window [class="^Xsane$"] floating enable
+for_window [class="^Xmag$"] floating enable
+for_window [class="^Wpa_gui$"] floating enable
+for_window [class="^Wine$"] floating enable
+for_window [class="^Dia$" window_role="^toolbox_window$"] floating enable
