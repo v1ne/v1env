@@ -1,6 +1,14 @@
 if [[ "$V1ENV" == "" ]]; then
   echo "ERROR: V1ENV not defined. Please point it to this v1env/zsh/zshrc."
 fi
+if [ -e "$V1ENV/../v1env-private" ]; then
+  export V1ENVPRIVATE="$V1ENV/../v1env-private"
+elif [ -e "$V1ENV/../env-private" ]; then
+  export V1ENVPRIVATE="$V1ENV/../env-private"
+else
+  echo "ERROR: v1env/zsh/zshrc: Where is v1env-private?"
+fi
+
 
 . "$V1ENV/zsh/os"
 
@@ -303,6 +311,7 @@ if [[ $V1OS == Linux ]]; then
   alias emerge='emerge --nospinner'
 fi
 
+alias v1-sync-env="(cd \"$V1ENV\" && git pull-rebase-push && cd \"$V1ENVPRIVATE\" && git pull-rebase-push)" # Pull-Push V1ENV
 alias lvared="IFS=\$'\n' vared" # vared with one line per entry for arrays
 alias lvim='vim *(.om[1]^D)' # edit newest file (excluding dot files)
 
