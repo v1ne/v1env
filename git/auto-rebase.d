@@ -201,7 +201,9 @@ string baseForFixups(const ref Parameters parms) {
   return earliestReferencedCommitHash.parentCommit;
 }
 
-// find the latest commit from a set of possible bases that leads up to HEAD
+/*
+ * Find the latest commit from a set of possible bases that leads up to HEAD.
+ */
 string baseFromBranches(const ref Parameters parms) {
   auto possibleBases = ["origin/master"];
 
@@ -223,13 +225,17 @@ string baseFromBranches(const ref Parameters parms) {
   if(parms.verbose)
     writeln("Possible bases: " ~ possibleBases.join(" "));
 
-  auto latestBase =
-    executeGitCmd(["rev-list", "--ignore-missing", "--reverse", "HEAD"]
-      ~ possibleBases.map!(base => "^" ~ base).array).front;
+  auto commitsSucceedingLatestBase =
+    executeGitCmd(["rev-list", "--ignore-missing", "--parents", "--reverse", "HEAD"]
+      ~ possibleBases.map!(base => "^" ~ base).array)
+    .filter!(line => line.indexOf(' ') >= 0) // exclude parentless root commit
+    .map!(line => line[0..line.indexOf(' ')]);
+  auto commitSucceedingLatestBase =
+    commitsSucceedingLatestBase.empty ? "" : commitsSucceedingLatestBase.front;
   if(parms.verbose)
     writeln("Latest base: ", commitSucceedingLatestBase);
 
-  return latestBase.parentCommit;
+  return commitSucceedingLatestBase.parentCommit;
 }
 
 // move "base" closer to HEAD so that only fixups/squashs are covered
