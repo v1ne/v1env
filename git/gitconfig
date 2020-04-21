@@ -42,6 +42,7 @@
   ca = commit --amend --no-edit
   cap = commit --amend --no-edit .
   cf = commit --fixup
+  cs = commit --squash
 
   current-branch = rev-parse --abbrev-ref HEAD
   co = checkout
@@ -50,6 +51,7 @@
   cp = cherry-pick
   cpa = cherry-pick --abort
   cpc = cherry-pick --continue
+  cps = cherry-pick --skip
 
   # Diff
   dh = diff --word-diff=color
@@ -95,6 +97,7 @@
   rc = rebase --continue
   ri = rebase -i
   ria = rebase -i --autosquash
+  rs = rebase --skip
   # Rebase Current Branch
   rcb = "!${V1ENV}/git/rebase-current-branch.d"
   rcba = "!${V1ENV}/git/rebase-current-branch.d" --autosquash
