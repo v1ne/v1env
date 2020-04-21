@@ -150,11 +150,16 @@ auto hashAndTitleFromGitCmd(string[] gitParameters) {
       return HashAndTitle(line[0..sep], line[sep+1..$]);}());
 }
 
+//! returns a map original title -> hash
 string[string] toOriginalTitleToHashMap(HashAndTitle[] hats) {
   return hats.map!(hat => {
       auto title = hat.title.strip;
       while (title.startsWith("fixup! ") || title.startsWith("squash! "))
         title = title[title.indexOf(' ')+1..$].stripLeft;
+
+      if(title.indexOf('"') == 0 && title.lastIndexOf('"') == title.length - 1)
+        title = title[1..$-1].strip;
+
       return tuple(title, hat.hash);
     }()).assocArray;
 }
