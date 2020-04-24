@@ -29,6 +29,7 @@
 
 module autoFixup;
 
+immutable auto branchFileName = ".config/v1/git_named_branches";
 immutable auto programName = "auto-fixup.d";
 immutable auto programDescription =
 "Automatically create fixup commits for the given selection of files, or
@@ -37,6 +38,10 @@ create a fixup for is the commit that last touched a line that the fixup
 will change or remove.
 
 A fixup is only created if the base commit is unique.
+Also, the fixup is not created if the base commit is already on
+origin/master or a named branch from ~/" ~ branchFileName ~",
+because this implies that the base commit is already on an append-only
+upstream branch.
 
 Options:";
 
@@ -46,7 +51,9 @@ import std.algorithm.sorting;
 import std.array;
 import std.ascii;
 import std.conv;
+import std.exception: ErrnoException;
 import std.getopt;
+import std.path: buildPath;
 import std.process;
 import std.range.primitives;
 import std.regex;
@@ -56,6 +63,7 @@ import std.string;
 
 struct Parameters {
   bool dryRun;
+  bool force;
   bool verbose;
 }
 
@@ -64,6 +72,7 @@ int main(string[] args) {
   auto result = getopt(args,
     std.getopt.config.caseSensitive,
     std.getopt.config.bundling,
+    "force|f", "Create fixup even though base commit is on a named branch", &parms.force,
     "dry-run|n", "Only determine base commit, don't create fixup", &parms.dryRun,
     "verbose|v", "Babble about what I'm doing", &parms.verbose);
   if(result.helpWanted) {
@@ -94,6 +103,16 @@ int main(string[] args) {
     stderr.writeln("Not fixing up. Found multiple base commits:", std.ascii.newline,
       baseCommits.toString);
     return 1;
+  }
+
+  if(!isBaseCommitAfterNamedBranches(parms, baseCommits[0].hash)) {
+    if(parms.force)
+      stdout.writeln("Warning: Fixing up commit that is on a named branch.");
+    else {
+      stdout.flush();
+      stderr.writeln("Not fixing up. Base commit is on a named branch.");
+      return 1;
+    }
   }
 
   return createFixup(parms, fileInfo, baseCommits);
@@ -307,7 +326,33 @@ auto baseCommitsFromFixupAndSquashes(
   return baseCommits;
 }
 
+bool isBaseCommitAfterNamedBranches(const ref Parameters parms, string baseCommitHash) {
+  auto namedBranches = ["origin/master"];
+
+  auto basesFilePath = buildPath(environment.get("HOME"), branchFileName);
+  try {
+    auto basesFile = File(basesFilePath);
+    namedBranches ~= basesFile
+      .byLineCopy()
+      .map!strip
+      .filter!(line => !line.empty && !line.startsWith('#'))
+      .map!(splitter).joiner
+      .map!strip
+      .array;
+  } catch(ErrnoException) {
+    if(parms.verbose)
+      writeln("Unable to open ", basesFilePath);
   }
+
+  if(parms.verbose)
+    writeln("Named branches to check against: " ~ namedBranches.join(" "));
+
+  auto isNotBeforeOrAtNamedBranch =
+    executeGitCmd(["rev-list", "--ignore-missing", "--parents", "--reverse", baseCommitHash]
+      ~ namedBranches.map!(base => "^" ~ base).array)
+    .empty;
+  return !isNotBeforeOrAtNamedBranch;
+}
 
 int createFixup(const ref Parameters parms, FileInfo fileInfo, CommitHashAndTitle[] baseCommits) {
   assert(baseCommits.length == 1);
