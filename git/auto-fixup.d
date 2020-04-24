@@ -62,6 +62,7 @@ import std.string;
 
 
 struct Parameters {
+  bool createSquashInsteadOfFixup;
   bool dryRun;
   bool force;
   bool verbose;
@@ -74,6 +75,7 @@ int main(string[] args) {
     std.getopt.config.bundling,
     "force|f", "Create fixup even though base commit is on a named branch", &parms.force,
     "dry-run|n", "Only determine base commit, don't create fixup", &parms.dryRun,
+    "squash|s", "Create squash instead of fixup", &parms.createSquashInsteadOfFixup,
     "verbose|v", "Babble about what I'm doing", &parms.verbose);
   if(result.helpWanted) {
     writeln("Usage: %s [-%s] [files...]".format(
@@ -358,12 +360,14 @@ int createFixup(const ref Parameters parms, FileInfo fileInfo, CommitHashAndTitl
   assert(baseCommits.length == 1);
   auto shortBaseCommitHash = executeGitCmd(["rev-parse", "--short", baseCommits[0].hash]).front;
   auto baseCommitString = shortBaseCommitHash ~ ": " ~ baseCommits[0].title;
+  auto type = parms.createSquashInsteadOfFixup ? "squash" : "fixup";
 
   if(parms.dryRun) {
-    writeln("Would create fixup for base commit ", baseCommitString);
+    writeln("Would create %s for base commit %s".format(type, baseCommitString));
   } else {
     auto result = executeGitCmd(
-      ["commit", "--fixup=" ~ baseCommits[0].hash] ~ (fileInfo.useStaged ? [] : fileInfo.files));
+      ["commit", "--%s=%s".format(type, baseCommits[0].hash)]
+      ~ (fileInfo.useStaged ? [] : fileInfo.files));
     auto hashLines = result.filter!(line => line.startsWith('[')).array;
     if(hashLines.length != 1) {
       stdout.flush();
@@ -372,7 +376,7 @@ int createFixup(const ref Parameters parms, FileInfo fileInfo, CommitHashAndTitl
     }
     auto hashLine = hashLines.front;
     auto fixupHash = hashLine[hashLine.indexOf(' ') + 1 .. hashLine.indexOf(']')];
-    writeln("Created fixup ", fixupHash, " for base commit ", baseCommitString);
+    writeln("Created %s %s for base commit %s".format(type, fixupHash, baseCommitString));
   }
 
   return 0;
