@@ -150,6 +150,12 @@ auto filesToCommit(const ref Parameters parms, string[] args) {
   return fileInfo;
 }
 
+struct SubmoduleState {
+  int linesAdded;
+  int linesRemoved;
+  int linesUnmodified;
+}
+
 struct ChangedFile {
   string filename;
 
@@ -167,7 +173,15 @@ auto removedLinesInFiles(const ref Parameters parms, FileInfo fileInfo) {
   string currentFile;
   int currentLine = 0;
 
+  SubmoduleState submoduleState;
+
   void endCurrentHunk() {
+    if(submoduleState.linesAdded == 1 && submoduleState.linesRemoved == 1 && submoduleState.linesUnmodified == 0) {
+      if(parms.verbose)
+        writeln("Ignoring modified submodule: ", currentFile);
+        submoduleState = SubmoduleState();
+    }
+
     if(currentHunk.beginLine > 0) {
       hunks.require(currentFile, []) ~= currentHunk;
       currentHunk.beginLine = 0;
@@ -182,6 +196,7 @@ auto removedLinesInFiles(const ref Parameters parms, FileInfo fileInfo) {
       endCurrentHunk();
 
       currentFile = line[6..$];
+      submoduleState = SubmoduleState();
     } else if(line.startsWith("@@")) {
       endCurrentHunk();
 
@@ -190,6 +205,11 @@ auto removedLinesInFiles(const ref Parameters parms, FileInfo fileInfo) {
       if(commaIndex < minusIndex)
         continue; // submodule
       currentLine = line[minusIndex+1..commaIndex].to!int;
+    } else if(line.startsWith("-Subproject commit ")) {
+      submoduleState.linesRemoved++;
+      ++currentLine;
+    } else if(line.startsWith("+Subproject commit ")) {
+      ++submoduleState.linesAdded;
     } else if(line.startsWith("-")) {
       if(currentHunk.beginLine == 0)
         currentHunk.beginLine = currentLine;
@@ -200,7 +220,9 @@ auto removedLinesInFiles(const ref Parameters parms, FileInfo fileInfo) {
       /* ignore */
     } else if(line.startsWith(" ")) {
       endCurrentHunk();
+
       ++currentLine;
+      ++submoduleState.linesUnmodified;
     } else {
       if(parms.verbose)
         writeln("In git diff output for ", currentFile, ", ignoring unrecognised line: ", line);
