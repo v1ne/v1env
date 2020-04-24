@@ -176,7 +176,9 @@ auto removedLinesInFiles(const ref Parameters parms, FileInfo fileInfo) {
 
   foreach(line; executeGitCmd(["diff", "-p"]
       ~ (fileInfo.useStaged ? ["--staged"] : "--" ~ fileInfo.files))) {
-    if(line.startsWith("--- a/")) {
+    if(line.startsWith("diff --git a/") || line.startsWith("+++ b/") || line.startsWith("index ")) {
+      /* ignore */
+    } else if(line.startsWith("--- a/")) {
       endCurrentHunk();
 
       currentFile = line[6..$];
@@ -200,6 +202,8 @@ auto removedLinesInFiles(const ref Parameters parms, FileInfo fileInfo) {
       endCurrentHunk();
       ++currentLine;
     } else {
+      if(parms.verbose)
+        writeln("In git diff output for ", currentFile, ", ignoring unrecognised line: ", line);
       endCurrentHunk();
     }
   }
