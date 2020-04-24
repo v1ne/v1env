@@ -30,6 +30,7 @@
 module autoRebase;
 
 immutable auto branchFileName = ".config/v1/git_named_branches";
+immutable auto programName = "auto-rebase.d";
 immutable auto programDescription =
 "Rebase the current branch in a branch-develop-merge scenario
 
@@ -88,7 +89,7 @@ int main(string[] args) {
       &parms.verbose);
   if(result.helpWanted) {
     writeln("Usage: %s [-%s] [files...]".format(
-      args[0], result.options.map!(opt => opt.optShort[1])));
+      programName, result.options.map!(opt => opt.optShort[1])));
     defaultGetoptPrinter(programDescription, result.options);
     return 0;
   }

@@ -29,11 +29,14 @@
 
 module autoFixup;
 
+immutable auto programName = "auto-fixup.d";
 immutable auto programDescription =
-"Automatically create fixup commits for what's currently staged,
-modified or the given selection of files. Fixups are only created
-if the base commit that all changed or removed lines refer to is
-unique.
+"Automatically create fixup commits for the given selection of files, or
+what's currently staged or what's currently modified. A base commit to
+create a fixup for is the commit that last touched a line that the fixup
+will change or remove.
+
+A fixup is only created if the base commit is unique.
 
 Options:";
 
@@ -65,7 +68,7 @@ int main(string[] args) {
     "verbose|v", "Babble about what I'm doing", &parms.verbose);
   if(result.helpWanted) {
     writeln("Usage: %s [-%s] [files...]".format(
-      args[0], result.options.map!(opt => opt.optShort[1])));
+      programName, result.options.map!(opt => opt.optShort[1])));
     defaultGetoptPrinter(programDescription, result.options);
     return 0;
   }
