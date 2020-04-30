@@ -66,7 +66,7 @@ if [[ -n "$SSH_CONNECTION" ]] ; then
 else
   hostpart=''
 fi
-PROMPT="$hostpart"'%(4~x...%B%3~x%B%~)%b %(0?:%#:%?!) '
+PROMPT="$hostpart"'%F{yellow}%(4~x...%B%3~x%B%~)%b%f %(0?:%F{green}%#%f:%F{red}%?!%f) '
 
 
 ####################
