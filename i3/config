@@ -20,10 +20,8 @@ force_display_urgency_hint 500 ms
 # start a terminal
 bindsym $mod+Return exec xterm -title fxterm
 bindsym $mod+Shift+Return exec xterm
-#bindsym $mod+Return exec urxvt -title furxvt
-#bindsym $mod+Shift+Return exec urxvt
-bindsym $mod+Ctrl+Return exec urxvt -name URxvtD -title furxvt
-bindsym $mod+Ctrl+Shift+Return exec urxvt -name URxvtD
+bindsym $mod+Ctrl+Return exec env V1_TERM_DARKMODE=1 xterm -name XTermD -title fxterm
+bindsym $mod+Ctrl+Shift+Return exec env V1_TERM_DARKMODE=1 xterm -name XTermD
 
 # kill focused window
 bindsym $mod+q kill
@@ -203,12 +201,8 @@ for_window [window_role="^pop-up$"] floating enable
 # xterm magic
 # goal:
 # - float new float xterms
-for_window [class="^XTerm$"] border pixel 2
-for_window [class="^URxvt$"] border pixel 2
-for_window [class="^XTerm$" title="^fxterm$"] border pixel 2
-for_window [class="^URxvt$" title="^furxvt$"] border pixel 2
-for_window [class="^XTerm$"  title="^fxterm$"] floating enable
-for_window [class="^URxvt$" title="^furxvt$"] floating enable
+for_window [class="^XTermD?$"] border pixel 2
+for_window [class="^XTermD?$"  title="^fxterm$"] floating enable
 
 # gkrellm: always float
 for_window [class="^Gkrellm$"] border none

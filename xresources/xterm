@@ -1,0 +1,105 @@
+XTerm.termName: xterm-256color
+XTerm.vt100.jumpScroll: true
+XTerm.vt100.fastScroll: true
+XTerm.vt100.saveLines: 10000
+XTerm.vt100.on3Clicks: regex ([^  <>|`"']|\\\\.)+
+XTerm.vt100.on4Clicks: regex (`([^`]|\\\\.)+`|"([^"]|\\\\.)+"|'([^']|\\\\.)+')
+XTerm.vt100.on5Clicks: line
+XTerm.vt100.cursorColor: SlateBlue
+XTerm.vt100.font: -misc-fixed-medium-r-normal-*-14-*-*-*-*-*-iso10646-1
+XTerm.vt100.font2: -misc-fixed-medium-r-normal-*-6-*-*-*-*-*-iso10646-1
+XTerm.vt100.font3: -misc-fixed-medium-r-normal-*-8-*-*-*-*-*-iso10646-1
+XTerm.vt100.font4: -adobe-courier-bold-r-normal-*-14-*-*-*-*-*-iso10646-1
+XTerm.vt100.font5: -adobe-courier-bold-r-normal-*-20-*-*-*-*-*-iso10646-1
+XTerm.vt100.font6: -adobe-courier-bold-r-normal-*-25-*-*-*-*-*-iso10646-1
+XTerm.vt100.bellIsUrgent: true
+XTerm.vt100.metaSendsEscape: true
+XTerm.scrollBar: false
+XTerm.utmpInhibit: true
+
+! dark mode
+XTermD.termName: xterm-256color
+XTermD.vt100.jumpScroll: true
+XTermD.vt100.fastScroll: true
+XTermD.vt100.saveLines: 10000
+XTermD.vt100.on3Clicks: regex ([^  <>|`"']|\\\\.)+
+XTermD.vt100.on4Clicks: regex (`([^`]|\\\\.)+`|"([^"]|\\\\.)+"|'([^']|\\\\.)+')
+XTermD.vt100.on5Clicks: line
+XTermD.vt100.cursorColor: SlateBlue
+XTermD.vt100.font: -misc-fixed-medium-r-normal-*-14-*-*-*-*-*-iso10646-1
+XTermD.vt100.font2: -misc-fixed-medium-r-normal-*-6-*-*-*-*-*-iso10646-1
+XTermD.vt100.font3: -misc-fixed-medium-r-normal-*-8-*-*-*-*-*-iso10646-1
+XTermD.vt100.font4: -adobe-courier-bold-r-normal-*-14-*-*-*-*-*-iso10646-1
+XTermD.vt100.font5: -adobe-courier-bold-r-normal-*-20-*-*-*-*-*-iso10646-1
+XTermD.vt100.font6: -adobe-courier-bold-r-normal-*-25-*-*-*-*-*-iso10646-1
+XTermD.vt100.bellIsUrgent: true
+XTermD.vt100.metaSendsEscape: true
+XTermD.scrollBar: false
+XTermD.utmpInhibit: true
+
+! urxvt stuff
+! don't use because urxvt doesn't discern ^W and ^-Shift-W
+URxvt.termName: rxvt-unicode-256color
+URxvt.font: -misc-fixed-medium-r-normal-*-14-*-*-*-*-*-iso10646-1
+URxvt.boldFont: -misc-fixed-bold-r-normal-*-14-*-*-*-*-*-iso10646-1
+URxvt.italicFont: -misc-fixed-bold-r-normal-*-14-*-*-*-*-*-iso10646-1
+URxvt.boldItalicFont: -misc-fixed-bold-r-normal-*-14-*-*-*-*-*-iso10646-1
+URxvt.perl-ext-common: default,-readline
+URxvt.secondaryScroll:  true
+URxvt.saveLines: 10000
+URxvt.scrollBar:  false
+URxvt*iso14755: false
+URxvt*iso14755_52: false
+! fix ^-Left etc in vim:
+URxvt.keysym.Control-Up:   \033[1;5A
+URxvt.keysym.Control-Down:    \033[1;5B
+URxvt.keysym.Control-Left:    \033[1;5D
+URxvt.keysym.Control-Right:    \033[1;5C
+URxvt.keysym.Shift-Up: \033[1;2A
+URxvt.keysym.Shift-Down: \033[1;2B
+URxvt.keysym.Shift-Left: \033[1;2D
+URxvt.keysym.Shift-Right: \033[1;2C
+
+
+! gruvbox light
+XTerm*cursorColor: #6A5ACD
+XTerm*background: #fbf1c7
+XTerm*foreground: #3c3836
+XTerm*color0:  #fdf4c1
+XTerm*color8:  #928374
+XTerm*color1:  #cc241d
+XTerm*color9:  #9d0006
+XTerm*color2:  #98971a
+XTerm*color10: #79740e
+XTerm*color3:  #d79921
+XTerm*color11: #b57614
+XTerm*color4:  #458588
+XTerm*color12: #076678
+XTerm*color5:  #b16286
+XTerm*color13: #8f3f71
+XTerm*color6:  #689d6a
+XTerm*color14: #427b58
+XTerm*color7:  #7c6f64
+XTerm*color15: #3c3836
+
+
+! gruvbox dark
+XTermD*cursorColor: #6A5ACD
+XTermD*background: #282828
+XTermD*foreground: #ebdbb2
+XTermD*color0:  #282828
+XTermD*color8:  #928374
+XTermD*color1:  #cc241d
+XTermD*color9:  #fb4934
+XTermD*color2:  #98971a
+XTermD*color10: #b8bb26
+XTermD*color3:  #d79921
+XTermD*color11: #fabd2f
+XTermD*color4:  #458588
+XTermD*color12: #83a598
+XTermD*color5:  #b16286
+XTermD*color13: #d3869b
+XTermD*color6:  #689d6a
+XTermD*color14: #8ec07c
+XTermD*color7:  #a89984
+XTermD*color15: #ebdbb2

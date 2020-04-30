@@ -1,7 +1,11 @@
 if &t_Co > 1 || has("gui_running")
   syntax on
   set termguicolors
-  set background=dark
+  if $V1_TERM_DARKMODE
+    set background=dark
+  else
+    set background=light
+  endif
   colorscheme gruvbox
   set number
 endif
