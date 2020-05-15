@@ -53,7 +53,7 @@ import std.ascii;
 import std.conv;
 import std.exception: ErrnoException;
 import std.getopt;
-import std.path: buildPath;
+import std.path: buildPath, isAbsolute;
 import std.process;
 import std.range.primitives;
 import std.regex;
@@ -144,9 +144,12 @@ struct FileInfo {
 auto filesToCommit(const ref Parameters parms, string[] args) {
   FileInfo fileInfo;
 
-  if(!args.empty)
-    fileInfo.files = args;
-  else {
+  if(!args.empty) {
+    auto prefix = environment.get("GIT_PREFIX");
+    fileInfo.files = prefix.empty
+      ? args
+      : args.map!(path => isAbsolute(path) ? path : buildPath(prefix, path)).array;
+  } else {
     string[] staged;
     string[] modified;
     foreach(line; executeGitCmd(["status", "--porcelain"])) {
