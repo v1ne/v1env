@@ -213,7 +213,7 @@ auto removedLinesInFiles(const ref Parameters parms, FileInfo fileInfo) {
   }
 
   foreach(line; executeGitCmd(["diff", "-p"]
-      ~ (fileInfo.useStaged ? ["--staged"] : "--" ~ fileInfo.files))) {
+      ~ (fileInfo.useStaged ? ["--staged"] : ["HEAD", "--"] ~ fileInfo.files))) {
     if(line.startsWith("diff --git a/") || line.startsWith("+++ b/") || line.startsWith("index ")) {
       /* ignore */
     } else if(line.startsWith("--- a/")) {
