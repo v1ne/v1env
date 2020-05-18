@@ -4,6 +4,7 @@
   whitespace = tab-in-indent,tabwidth=2
 
 [advice]
+  addEmptyPathspec = false
   detachedHead = false
 [diff]
   tool = meld
