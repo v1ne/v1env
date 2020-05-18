@@ -170,10 +170,17 @@ string earliestMentionedTitle(string start, string[string] titlesToHashes) {
     return "";
 
   string lastHash;
-  foreach(hat; hashAndTitleFromGitCmd(["log", "--format=%h %s"])) {
-    lastHash = hat.hash;
-    if(hat.title in titlesToHashes)
+  foreach(hat; hashAndTitleFromGitCmd(["log", "--format=%H:%h %s"])) {
+    auto hashes = hat.hash.split(':').array;
+    auto fullHash = hashes[0];
+    auto abbrevHash = hashes[1];
+
+    lastHash = abbrevHash;
+    if(hat.title in titlesToHashes || fullHash in titlesToHashes || abbrevHash in titlesToHashes) {
       titlesToHashes.remove(hat.title);
+      titlesToHashes.remove(fullHash);
+      titlesToHashes.remove(abbrevHash);
+    }
 
     if(titlesToHashes.empty)
       break;
