@@ -38,6 +38,10 @@
   ba = branch -a
   bac = branch -a --contains
 
+  # Clone
+  cd1 = clone --depth=1 --shallow-submodules --recurse-submodules
+  cr = clone --recurse-submodules
+
   # Commit
   c = commit
   ca = commit --amend --no-edit
@@ -81,6 +85,7 @@
   delete-merged = !git branch --merged | grep -vE \"\\*|master|dev\" | xargs -rn 1 git branch -d
 
   # Pull
+  p = pull --recurse-submodules=on-demand
   pr = pull --rebase
 
   # Push
