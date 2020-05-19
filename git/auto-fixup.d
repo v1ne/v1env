@@ -48,6 +48,7 @@ Options:";
 import core.stdc.stdlib;
 import std.algorithm.iteration;
 import std.algorithm.sorting;
+import std.algorithm.searching: findSplitAfter, findSplitBefore;
 import std.array;
 import std.ascii;
 import std.conv;
@@ -237,7 +238,7 @@ auto removedLinesInFiles(const ref Parameters parms, FileInfo fileInfo) {
     if(line.startsWith("diff --git a/")) {
       endCurrentHunk();
       createRenameHunk();
-      startNewFile(line[line.indexOf(" a/")+3 .. line.indexOf(" b/")]);
+      startNewFile(line.findSplitAfter(" a/")[1].findSplitAfter(" b/")[1]);
     } else if(line.startsWith("--- a/") || line.startsWith("+++ b/")) {
       /* ignore */
     } else if(line.startsWith("index ") || line.startsWith("similarity index")) {
@@ -247,11 +248,10 @@ auto removedLinesInFiles(const ref Parameters parms, FileInfo fileInfo) {
     } else if(line.startsWith("@@")) {
       endCurrentHunk();
 
-      auto minusIndex = line.indexOf('-');
-      auto commaIndex = line[minusIndex..$].indexOfAny(",") + minusIndex;
-      if(commaIndex < minusIndex)
+      auto removedLines = line.findSplitAfter("-")[1].findSplitBefore(",");
+      if(removedLines[1].empty)
         continue; // submodule
-      currentLine = line[minusIndex+1..commaIndex].to!int;
+      currentLine = removedLines[0].to!int;
     } else if(line.startsWith("-Subproject commit ")) {
       submoduleState.linesRemoved++;
       ++currentLine;
@@ -414,7 +414,7 @@ int createFixup(const ref Parameters parms, FileInfo fileInfo, CommitHashAndTitl
       exit(1);
     }
     auto hashLine = hashLines.front;
-    auto fixupHash = hashLine[hashLine.indexOf(' ') + 1 .. hashLine.indexOf(']')];
+    auto fixupHash = hashLine.findSplitAfter(" ")[1].findSplitBefore("]")[0];
     writeln("Created %s %s for base commit %s".format(type, fixupHash, baseCommitString));
   }
 
