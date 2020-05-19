@@ -153,6 +153,9 @@ auto filesToCommit(const ref Parameters parms, string[] args) {
     string[] staged;
     string[] modified;
     foreach(line; executeGitCmd(["status", "--porcelain"])) {
+      if(line[0] == 'R' || line[1] == 'R')
+        line = line.split(" -> ")[0];
+
       if(line[0] == 'D' || line[0] == 'M' || line[0] == 'R')
         staged ~= line[3..$];
       else if(line[1] == 'D' || line[1] == 'M' || line[1] == 'R')
@@ -180,6 +183,7 @@ struct SubmoduleState {
   int linesUnmodified;
 }
 
+immutable int kWholeFile = -1;
 struct ChangedFile {
   string filename;
 
@@ -195,7 +199,8 @@ auto removedLinesInFiles(const ref Parameters parms, FileInfo fileInfo) {
 
   ChangedFile.LinePair currentHunk;
   string currentFile;
-  int currentLine = 0;
+  int currentLine;
+  bool renamed;
 
   SubmoduleState submoduleState;
 
@@ -203,6 +208,7 @@ auto removedLinesInFiles(const ref Parameters parms, FileInfo fileInfo) {
     currentFile = fileName;
 
     submoduleState = SubmoduleState();
+    renamed = false;
   }
 
   void endCurrentHunk() {
@@ -218,15 +224,26 @@ auto removedLinesInFiles(const ref Parameters parms, FileInfo fileInfo) {
     }
   }
 
+  void createRenameHunk() {
+    if(renamed && !(currentFile in hunks)) {
+      renamed = false;
+
+      hunks[currentFile] = [ChangedFile.LinePair(kWholeFile, kWholeFile)];
+    }
+  }
+
   foreach(line; executeGitCmd(["diff", "-p"]
       ~ (fileInfo.useStaged ? ["--staged"] : (["HEAD", "--"] ~ fileInfo.files)))) {
     if(line.startsWith("diff --git a/")) {
       endCurrentHunk();
+      createRenameHunk();
       startNewFile(line[line.indexOf(" a/")+3 .. line.indexOf(" b/")]);
     } else if(line.startsWith("--- a/") || line.startsWith("+++ b/")) {
       /* ignore */
-    } else if(line.startsWith("index ")) {
+    } else if(line.startsWith("index ") || line.startsWith("similarity index")) {
       /* ignore */
+    } else if(line.startsWith("rename ")) {
+      renamed = true;
     } else if(line.startsWith("@@")) {
       endCurrentHunk();
 
@@ -260,6 +277,7 @@ auto removedLinesInFiles(const ref Parameters parms, FileInfo fileInfo) {
     }
   }
   endCurrentHunk();
+  createRenameHunk();
 
   auto result = hunks.keys.map!(filename => ChangedFile(filename, hunks[filename])).array;
 
@@ -267,8 +285,14 @@ auto removedLinesInFiles(const ref Parameters parms, FileInfo fileInfo) {
     writeln("Removed hunks:", std.ascii.newline,
       result.map!(file =>
         "  " ~ file.filename ~ ": "
-        ~ file.hunks.map!(hunk => to!string(hunk.beginLine) ~ "-" ~ to!string(hunk.endLine))
-          .join(", "))
+        ~ file.hunks
+          .map!(hunk =>
+              hunk.beginLine == kWholeFile
+              ? "(whole file)"
+              : to!string(hunk.beginLine) ~ "-" ~ to!string(hunk.endLine)
+            )
+          .join(", ")
+        )
       .join(std.ascii.newline));
 
   return result;
@@ -292,8 +316,14 @@ auto commitsPreviouslyModifyingChangedLinesIn(
   CommitHashAndTitle[string] commitMap;
   foreach(file; files) {
     auto blame = executeGitCmd(["blame", "--porcelain"]
-      ~ file.hunks.map!(hunk =>
-          ["-L", to!string(hunk.beginLine) ~ "," ~ to!string(hunk.endLine -1)]).joiner.array
+      ~ file.hunks
+          .map!(hunk =>
+              hunk.beginLine == kWholeFile
+              ? []
+              : ["-L", to!string(hunk.beginLine) ~ "," ~ to!string(hunk.endLine -1)]
+            )
+          .joiner
+          .array
       ~ ["HEAD", "--", file.filename]);
 
     string hash;
