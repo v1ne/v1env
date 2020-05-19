@@ -199,6 +199,12 @@ auto removedLinesInFiles(const ref Parameters parms, FileInfo fileInfo) {
 
   SubmoduleState submoduleState;
 
+  void startNewFile(string fileName) {
+    currentFile = fileName;
+
+    submoduleState = SubmoduleState();
+  }
+
   void endCurrentHunk() {
     if(submoduleState.linesAdded == 1 && submoduleState.linesRemoved == 1 && submoduleState.linesUnmodified == 0) {
       if(parms.verbose)
@@ -214,13 +220,13 @@ auto removedLinesInFiles(const ref Parameters parms, FileInfo fileInfo) {
 
   foreach(line; executeGitCmd(["diff", "-p"]
       ~ (fileInfo.useStaged ? ["--staged"] : ["HEAD", "--"] ~ fileInfo.files))) {
-    if(line.startsWith("diff --git a/") || line.startsWith("+++ b/") || line.startsWith("index ")) {
-      /* ignore */
-    } else if(line.startsWith("--- a/")) {
+    if(line.startsWith("diff --git a/")) {
       endCurrentHunk();
-
-      currentFile = line[6..$];
-      submoduleState = SubmoduleState();
+      startNewFile(line[line.indexOf(" a/")+3 .. line.indexOf(" b/")]);
+    } else if(line.startsWith("--- a/") || line.startsWith("+++ b/")) {
+      /* ignore */
+    } else if(line.startsWith("index ")) {
+      /* ignore */
     } else if(line.startsWith("@@")) {
       endCurrentHunk();
 
