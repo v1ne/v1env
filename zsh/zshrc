@@ -9,8 +9,12 @@ else
   echo "ERROR: v1env/zsh/zshrc: Where is v1env-private?"
 fi
 
-
+SAVED_V1_OS="$V1_OS"
 . "$V1ENV/zsh/os"
+
+if [[ "$SAVED_V1_OS" == "" ]]; then
+  IS_FIRST_START=1
+fi
 
 source_sh () {
   emulate -LR sh
@@ -27,19 +31,20 @@ fi
 ###### Paths #######
 ####################
 
-# Add standard path elements:
-amendedPath=
-for mybin in "${HOME}/bin" "$HOME/.local/bin"; do
-  if [[ -e $mybin && -z ${path[(r)$mybin]} ]] ; then
+# Add path elements to prepend:
+for mybin in "${HOME}/bin" "${HOME}/.local/bin"; do
+  if [[ -e "$mybin" && 0 == ${path[(Ie)$mybin]} ]] ; then
     path=($mybin $path)
-    amendedPath=1
   fi
 done
-if [[ "$amendedPath" != "" ]]; then
-  if [[ $V1OS == Linux ]]; then
-    # Linux has the tendency to cram useful tools in to sbin
-    path=($path /usr/sbin /sbin /bin)
-  fi
+
+# Add path elements to append:
+if [[ $V1OS == Linux ]] && ! (($path[(Ie)/sbin])); then
+  # Linux has the tendency to cram useful tools in to sbin
+  path=($path /usr/sbin /sbin /bin)
+fi
+if ! (($path[(Ie)${HOME}/.cargo/bin])); then
+  path=($path ${HOME}/.cargo/bin)
 fi
 
 
@@ -231,7 +236,7 @@ zshaddhistory() {
 #########################
 #########################
 
-if [[ $V1OS == MSYS2 && "$amendedPath" != "" ]]; then
+if [[ $V1OS == MSYS2 && "$IS_FIRST_START" != "" ]]; then
   . "$V1ENV/zsh/win"
 fi
 
