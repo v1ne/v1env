@@ -233,3 +233,9 @@ for_window [class="^Xmag$"] floating enable
 for_window [class="^Wpa_gui$"] floating enable
 for_window [class="^Wine$"] floating enable
 for_window [class="^Dia$" window_role="^toolbox_window$"] floating enable
+
+# cinnamon-i3:
+#* use 'exec cinnamon-session-quit --logout'    : logout dialog
+#* use 'exec cinnamon-session-quit --power-off' : shutdown menu
+#* use 'exec cinnamon-screensaver-command -l'   : locks the screen
+#* use 'exec cinnamon-screensaver-lock-dialog   : lockscreen with message
