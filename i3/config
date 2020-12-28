@@ -184,12 +184,15 @@ bar {
 ## hotkeys
 ##########################
 
-
-bindsym XF86ScreenSaver exec --no-startup-id i3lock
 bindsym XF86AudioRaiseVolume exec --no-startup-id pactl set-sink-volume @DEFAULT_SINK@ +5%
 bindsym XF86AudioLowerVolume exec --no-startup-id pactl set-sink-volume @DEFAULT_SINK@ -5%
 bindsym XF86AudioMute exec --no-startup-id pactl set-sink-mute @DEFAULT_SINK@ toggle
 #bindsym XF86AudioMicMute exec --no-startup-id pactl set-source-mute @DEFAULT_SOURCE@ toggle
+bindsym XF86ScreenSaver exec cinnamon-screensaver-command -l
+bindsym XF86PowerOff exec cinnamon-session-quit --power-off
+bindsym $mod+Ctrl+Del exec cinnamon-session-quit --logout
+bindsym XF86Launch1 exec systemctl suspend
+#bindsym XF86Sleep exec systemctl suspend
 
 ##############################################################################
 ## program quirks
@@ -233,9 +236,3 @@ for_window [class="^Xmag$"] floating enable
 for_window [class="^Wpa_gui$"] floating enable
 for_window [class="^Wine$"] floating enable
 for_window [class="^Dia$" window_role="^toolbox_window$"] floating enable
-
-# cinnamon-i3:
-#* use 'exec cinnamon-session-quit --logout'    : logout dialog
-#* use 'exec cinnamon-session-quit --power-off' : shutdown menu
-#* use 'exec cinnamon-screensaver-command -l'   : locks the screen
-#* use 'exec cinnamon-screensaver-lock-dialog   : lockscreen with message
