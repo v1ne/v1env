@@ -192,7 +192,7 @@ bindsym XF86ScreenSaver exec cinnamon-screensaver-command -l
 bindsym XF86PowerOff exec cinnamon-session-quit --power-off
 bindsym $mod+Ctrl+Del exec cinnamon-session-quit --logout
 bindsym XF86Launch1 exec systemctl suspend
-#bindsym XF86Sleep exec systemctl suspend
+bindsym XF86Display exec theme-switcher.sh
 
 ##############################################################################
 ## program quirks
