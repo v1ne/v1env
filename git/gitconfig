@@ -58,12 +58,13 @@
   cpc = cherry-pick --continue
   cps = cherry-pick --skip
 
-  # Diff
+  # Diff (u: upstream, o: origin, m: master, r: raw)
   dh = diff --word-diff=color
-  do = !git dh origin/`git rev-parse --abbrev-ref HEAD`..HEAD
-  dom = !git dh origin/master..HEAD
-  dor = !git diff origin/`git rev-parse --abbrev-ref HEAD`..HEAD
-  domr = !git diff origin/master..HEAD
+  dom = !git dh `git rev-parse --abbrev-ref --symbolic-full-name @{u}| sed 'sx/.*xx'`/master..HEAD
+  domr = !git diff `git rev-parse --abbrev-ref --symbolic-full-name @{u}| sed 'sx/.*xx'`/master..HEAD
+  du = !git dh `git rev-parse --abbrev-ref --symbolic-full-name @{u}`..HEAD
+  dum = !git dh `git rev-parse --abbrev-ref --symbolic-full-name @{u}| sed 'sx/.*xx'`/master..HEAD
+  dur = !git diff `git rev-parse --abbrev-ref --symbolic-full-name @{u}`..HEAD
 
   # Fetch
   fp = fetch --prune --recurse-submodules=on-demand
