@@ -78,7 +78,7 @@ bindsym $mod+Ctrl+Right workspace next_on_output
 bindsym $mod+Shift+j move workspace to output left
 bindsym $mod+Shift+k move workspace to output down
 bindsym $mod+Shift+l move workspace to output up
-bindsym $mod+Shift+odiaresis move workspace to output right
+bindsym $mod+Shift+odiaeresis move workspace to output right
 
 # switch to workspace
 bindcode $mod+49 workspace 0
