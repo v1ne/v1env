@@ -112,6 +112,8 @@
   room = rebase --onto=origin/master origin/master
   roomi = rebase -i --onto=origin/master origin/master
 
+  recent-branches = branch --list --sort=-committerdate
+
   # Reset
   # Reset HEAD to origin (reset local branch to remote branch)
   rho = !git reset --hard origin/`git rev-parse --abbrev-ref HEAD`
