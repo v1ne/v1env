@@ -150,7 +150,7 @@ autoload -U down-line-or-beginning-search
 zle -N down-line-or-beginning-search
 
 bindkey -v
-if [[ "$TERM" =~ "^xterm" || "$TERM" =~ "^rxvt" || "$TERM" =~ "^screen" ]]; then
+if [[ "$TERM" =~ "^xterm" || "$TERM" =~ "^rxvt" || "$TERM" =~ "^screen" || "$TERM" = "alacritty" ]]; then
   bindkey '^[Od' backward-tiny-word
   bindkey '^[[1;5D' backward-tiny-word # C-left
   bindkey '^[[1;6D' backward-word # C-S-left (broken on rxvt)
