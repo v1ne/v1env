@@ -190,7 +190,6 @@ bindkey '^W' backward-delete-tiny-word
 bindkey '^[d' delete-tiny-word
 bindkey '^[D' delete-word
 
-# TODO: Use zshcontrib select-word-style?
 
 # csh dabbrev-expand for zsh: <3
 zstyle ':completion:history-words:*:history-words' stop yes
@@ -200,6 +199,9 @@ zstyle ':completion:history-words:*' menu no
 bindkey '\e/' _history-complete-older  # M-/
 bindkey '\e\\' _history-complete-newer # M-\
 #TODO: dabbrev-expand without /-Erweiterung (at the moment, M-/ needs to be pressed twice)
+
+# ^R almost like in bash:
+bindkey '^R' history-incremental-search-backward
 
 # Force menu on ^X^I
 zle -C complete-first complete-word _generic
