@@ -15,6 +15,7 @@ function vs_gen_if_newer() {
       fi
 }
 
+# Build environment to call cl.exe from MSYS2
 function vs64()
 {
   [ -e ~/.zsh ] || mkdir ~/.zsh
@@ -39,7 +40,7 @@ function vs64()
 }
 
 # Add standard path elements:
-if [ -n "$WINDIR" ] ; then
+if [ -n "$VS140COMNTOOLS" ] && [ -n "$WINDIR" ] ; then
   export PRE_VS_PATH=$PATH
   vs64
 fi
@@ -58,11 +59,16 @@ fi
 # kd.exe & co:
 path=($path "/c/Program Files (x86)/Windows Kits/10/Debuggers/x64/")
 
-# Use Git for Windows, it's a stripped-down version of MSYS64 that requires special treatment.
-# The supplied wrapper "git" script will call GfW in the end, but ensure that SSH and the editor works.
-export GITDIR="/c/Program Files/Git"
-[ -e $GITDIR/bin ] && path=($V1ENV/git/win "$GITDIR/bin" $path)
-[ -e $GITDIR/mingw64 ] && path=($path "$GITDIR/mingw64/bin")
+if false; then
+	# Use Git for Windows, it's a stripped-down version of MSYS64 that requires special treatment.
+	# The supplied wrapper "git" script will call GfW in the end, but ensure that SSH and the editor works.
+	export GITDIR="/c/Program Files/Git"
+	[ -e $GITDIR/bin ] && path=($V1ENV/git/win "$GITDIR/bin" $path)
+	[ -e $GITDIR/mingw64 ] && path=($path "$GITDIR/mingw64/bin")
+else
+	# With newer MSYS2, it looks fine to call Git for Windows (MINGW64) from MSYS2 directly
+	path=($path "/c/Program Files/Git/bin")
+fi
 compdef -d git # Disable Git completion, it's unbearably slow on Windows
 
 [ -e "/c/Program Files (x86)/CMake/bin" ] && path=($path "/c/Program Files (x86)/CMake/bin")
@@ -99,7 +105,6 @@ SSH_ENV="$HOME/.ssh/environment"
 
 function start_ssh_agent {
   echo "Spawning new SSH agent:"
-  [ -e "$SSH_ENV" ] || mkdir "$SSH_ENV"
   /usr/bin/ssh-agent | sed 's/^echo/#echo/' > "${SSH_ENV}"
   chmod 600 "${SSH_ENV}"
   . "${SSH_ENV}" > /dev/null
@@ -112,8 +117,10 @@ else
   start_ssh_agent;
 fi
 
-# Git for Windows needs a non-console editor, supply one
-export WINEDITOR="$(find '/c/Program Files (x86)/Vim/' -mindepth 1 -maxdepth 1 -type d | grep -i 'vim[0-9]' | sort -n | tail -1)/gvim.exe"
+if false; then
+	# Git for Windows needs a non-console editor, supply one -- not needed anymore
+	export WINEDITOR="$(find '/c/Program Files (x86)/Vim/' -mindepth 1 -maxdepth 1 -type d | grep -i 'vim[0-9]' | sort -n | tail -1)/gvim.exe"
+fi
 
 # This is the best. MSYS2 doesn't start at $HOME. So, make it do this explicitly:
 cd $HOME
