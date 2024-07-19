@@ -4,6 +4,8 @@ elif [ -e "/c/" ]; then # also has /proc/version, check first
   V1OS="MSYS2"
 elif [ -e /proc/version ]; then
   V1OS="Linux"
+elif [ -e /usr/bin/otool ]; then
+  V1OS="macOS"
 else
   V1OS="unknown"
   echo "ERROR: V1ENV/zsh/os: Unknown operating system"
