@@ -173,9 +173,9 @@ if [[ "$TERM" =~ "^xterm" || "$TERM" =~ "^rxvt" || "$TERM" =~ "^screen" || "$TER
   bindkey '^[[A' up-line-or-beginning-search # up
   bindkey '^[[B' down-line-or-beginning-search # down
   bindkey '^[[Z' reverse-menu-complete # S-Tab reverses cycling
-  if [[ "$TERM" =~ "^xterm" ]]; then
+  if [[ "$TERM" =~ "^alacritty" || "$TERM" =~ "^xterm" ]]; then
     bindkey '^[^W' backward-delete-word # C-A-W
-    bindkey '^[OA' up-line-or-beginning-search # up (Gnome Terminal!?)
+    bindkey '^[OA' up-line-or-beginning-search # up (Gnome Terminal, Alacritty)
     bindkey '^[OB' down-line-or-beginning-search # down
   fi
 else
