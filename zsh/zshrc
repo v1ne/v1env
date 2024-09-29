@@ -82,9 +82,11 @@ autoload -U colors ; colors
 
 zstyle ':completion:*:default' list-colors ${(s.:.)LS_COLORS}
 
-[ -e ~/.zsh/cache ] || mkdir -p ~/.zsh/cache
+CACHE_PATH="$HOME/.zsh/cache/$HOST"
+[ -e $CACHE_PATH ] || mkdir -p $CACHE_PATH
 zstyle ':completion::complete:*' use-cache on
-zstyle ':completion::complete:*' cache-path ~/.zsh/cache/$HOST
+zstyle ':completion::complete:*' cache-path $CACHE_PATH
+unset CACHE_PATH
 
 zstyle ':completion:*' expand 'yes' # /u/s/l^I -> /usr/src/linux
 zstyle ':completion:*' squeeze-slashes 'no' # don't remove trailing /
