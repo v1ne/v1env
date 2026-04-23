@@ -23,8 +23,8 @@ input type:keyboard {
 	xkb_layout de
 	xkb_variant nodeadkeys
 	xkb_options caps:swapescape
-	repeat_delay 250
-	repeat_rate 35
+	repeat_delay 225
+	repeat_rate 32
 }
 
 # Options: Use alt+num to switch back where we came from
