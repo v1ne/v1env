@@ -1,0 +1,106 @@
+#!/bin/sh -x
+
+# Debug-Kruecke:
+#[ "$1" = "real" ] || (exec xterm -e $0 real)
+
+. /etc/profile # :-)
+
+echo "$DISPLAY" | grep -q '.:[0-9]' && IS_REMOTE_SESSION=1
+
+# XXX: source .zshrc, um Pfad zu setzen
+export PATH=/home/dans/bin:${PATH}:$HOME/.local/bin
+
+# Schlag mich, aber es geht für's Erste.
+synclient LeftEdge=1000 RightEdge=1001 TopEdge=1000 BottomEdge=1001 RTCornerButton=0 RBCornerButton=0 VertEdgeScroll=1 HorizEdgeScroll=1 PalmDetect=1 EmulateMidButtonTime=0 
+
+/home/dans/.local/bin/rslsync &
+
+set -x
+
+cd $HOME
+export LANG=de_DE.UTF-8
+export LC_ALL=de_DE.UTF-8
+xrdb .Xdefaults
+xset r rate 225 32
+xset b 100 1500 25
+xset fp+ ~/.fonts
+[ -z "$IS_REMOTE_SESSION" ] && \
+	xmodmap .xmodmap
+
+eval `dbus-launch --sh-syntax --exit-with-session`
+
+if true; then
+#if [ "$DISPLAY" = ":0" ] ; then
+  if xrandr | grep 1920x1920; then
+     xrandr --output DVI-D-0 --mode 1920x1920 --rate 29.94 --primary
+     xrandr --output DP-0 --auto --right-of DVI-D-0
+  else
+    xrandr --output DP-0 --primary
+    xrandr --output DP-2 --right-of DP-0 --auto
+  fi 
+
+	# inputbus foo:
+	export XIM=ibus
+	export GTK_IM_MODULE=ibus
+	export QT_IM_MODULE=ibus
+	export XMODIFIERS=@im=ibus
+	# Nö, kennt kein nodeadkeys
+	#export XIM_PROGRAM="ibus-daemon"
+	#export XIM_ARGS="--daemonize --xim"
+	#ibus-daemon -d -x
+
+	(qdbus; kdeinit4)&
+	xbindkeys&
+
+	# Ende des parallelen Starts:
+	############
+	wait
+	############
+	# Sachen, die im Hintergrund bleiben, starten:
+
+	# reconfigure external keyboard, start daemon that watches for udev events to configure it again:
+	reconfigure-keyboard
+	watch-tpkbd&
+
+	# Override previously overridden values (thanks KDE):
+	grep dpi .Xdefaults | xrdb -override
+  xrdb .Xdefaults
+  xset r rate 225 32
+	xset b 100 1500 25
+	xmodmap .xmodmap
+
+	# Radeon ist damit schneller: -- nur xterm, dafür Tearing
+	#xcompmgr  -r 0 -a &
+
+	#(sleep 2;xsetroot -bg black)&
+	# Backgrounds:
+	nitrogen --restore
+
+	#redshift -l 52.513:13.466 -t 6500:4200  -g 0.8 &
+	redshift -l 52.513:13.466 -t 6500:5000  -g 0.8 &
+
+	# (
+	# 	sleep 0.2
+	# 	i3-msg "workspace 1; append_layout $HOME/.i3/ws1.json"
+	# 	i3-msg "workspace 2; append_layout $HOME/.i3/ws2.json"
+	# 	i3-msg "workspace 3; append_layout $HOME/.i3/ws3.json"
+	# 	i3-msg "workspace 1"
+	# 	for i in `jot 7 1`; do
+	# 		urxvt&
+	# 	done
+	# 	firefox&
+	# )&
+
+	#exec i3
+	exec wmaker
+
+else
+	############
+	wait
+	############
+	xterm&
+
+	which twm && exec twm
+	which wmaker && exec wmaker
+	which i3 && exec i3 -a
+fi

@@ -1,0 +1,34 @@
+
+! Performance: Escape<->CapsLock
+keycode 66  = Escape
+keycode 9 = Caps_Lock
+
+! FreeBSD w/ Thinkpad USB keyboard (KU-1255)
+keycode 107 = Multi_key
+
+!!! Linux / meine Thinkpad-Tastatur:
+!keycode 167 = Next
+!keycode 166 = Prior
+!! Windows-Taste
+!keycode 133 = Super_L
+!! Menü-Taste -> Compose
+!keycode 135 = Multi_key
+!! Drucken-Taste -> Compose
+!keycode 111 = Multi_key
+!
+
+!! FreeBSD:
+!keycode 144 = Home
+!keycode 153 = End
+!keycode 233 = Next
+!keycode 234 = Prior
+
+!! Menü-Taste == Compose
+!keycode 117 = Multi_key
+!! Windows-Taste
+!keycode 115 = Super_L
+
+remove mod1 = Super_L Super_R
+remove mod4 = Super_L Super_R
+remove mod5 = Mode_switch
+add mod3 = Super_L
