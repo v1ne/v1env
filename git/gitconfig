@@ -23,6 +23,8 @@
   conflictstyle = diff3
   tool = meld
   renamelimit = 10000
+[rebase]
+  autoStash = true
 [submodule]
   fetchJobs = 24
 
