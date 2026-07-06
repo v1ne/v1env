@@ -217,21 +217,20 @@ zstyle ':completion:complete-files:*' completer _files
 bindkey "^X^D" complete-files
 
 HISTFILE=~/.histfile
-HISTSIZE=2000
-SAVEHIST=2000
+HISTSIZE=20000
+SAVEHIST=20000
 
 ## Prevent somethings to occur in the history:
 zshaddhistory() {
   local line=${1%%$'\n'}
   local cmd=${line%% *}
 
-  [[ ${cmd} != "youtube-dl" \
-  && ${cmd} != "youtube-watch" \
-  && ${cmd} != "mpv" \
-  && ${cmd} != "histrm" \
-  && ${cmd} != "pass" \
-  && ${line} != (*[^a-zA-Z0-9]Keys/*) \
-  ]]
+  [[ "${cmd}" != "youtube-dl" \
+  && "${cmd}" != "youtube-watch" \
+  && "${cmd}" != "mpv" \
+  && "${cmd}" != "histrm" \
+  && "${cmd}" != "pass" \
+  ]] && ! [[ "${line}" =~ '^cccc[a-z]{40,}$' ]] # Yubikey noise
 }
 
 
