@@ -28,6 +28,7 @@
     "vim.commandLineModeKeyBindings": [
     ],
     "window.autoDetectColorScheme": true,
-    "workbench.colorTheme": "Default Light Modern",
+    "workbench.preferredLightColorTheme": "Light 2026",
+    "workbench.preferredDarkColorTheme": "Dark 2026",
     "workbench.sideBar.location": "right"
 }
