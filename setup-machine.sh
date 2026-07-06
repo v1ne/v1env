@@ -10,6 +10,12 @@ PATH="$PATH:${HOME}/.local/bin"
 EOF
 fi
 
+if [ -e /etc/udev/rules.d ]; then
+  if ! [ -e /etc/udev/rules.d/99-tpkbd-enable-fnlock.rules ]
+    sudo install -m 0644 linux/99-tpkbd-enable-fnlock.rules /etc/udev/rules.d/
+  fi
+fi
+
 if which gsettings &> /dev/null; then
   gsettings set org.gnome.desktop.interface font-antialiasing rgba
   # keyboard settings
