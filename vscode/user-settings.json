@@ -1,20 +1,32 @@
 {
+    "claudeCode.preferredLocation": "panel",
+    "cmake.skipConfigureIfCachePresent": true,
+    "editor.cursorBlinking": "solid",
+    "editor.minimap.enabled": false,
     "keyboard.dispatch": "keyCode",
-    "workbench.colorTheme": "Default Light Modern",
+    "vim.ignorecase": false,
+    "vim.hlsearch": true,
     "vim.handleKeys": {
         "<C-a>": true,
         "<C-b>": false,
         "<C-f>": false,
         "<C-j>": false,
+        "<C-k>": false,
         "<C-p>": false,
         "<C-r>": true,
         "<C-v>": false,
         "<C-w>": false
     },
-    "editor.minimap.enabled": false,
+    "vim.normalModeKeyBindingsNonRecursive": [
+        {
+            "before": ["<C-w>"],
+            "commands": ["workbench.action.closeActiveEditor"]
+        }
+    ],
     "vim.commandLineModeKeyBindings": [
 
     ],
-    "cmake.skipConfigureIfCachePresent": true,
-    "window.autoDetectColorScheme": true
+    "window.autoDetectColorScheme": true,
+    "workbench.colorTheme": "Default Light Modern",
+    "workbench.sideBar.location": "right"
 }

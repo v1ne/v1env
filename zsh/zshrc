@@ -3,6 +3,7 @@ if [[ "$V1ENV" == "" ]]; then
 fi
 if [ -e "$V1ENV/../v1env-private" ]; then
   export V1ENVPRIVATE="$V1ENV/../v1env-private"
+  export LOCAL_VSCODE_USERJSON="$V1ENVPRIVATE/vscode/$(hostname).json"
 elif [ -e "$V1ENV/../env-private" ]; then
   export V1ENVPRIVATE="$V1ENV/../env-private"
 else
