@@ -3,6 +3,8 @@
     "cmake.skipConfigureIfCachePresent": true,
     "editor.cursorBlinking": "solid",
     "editor.minimap.enabled": false,
+    "files.insertFinalNewline": true,
+    "files.trimFinalNewlines": true,
     "keyboard.dispatch": "keyCode",
     "vim.ignorecase": false,
     "vim.hlsearch": true,
@@ -24,7 +26,6 @@
         }
     ],
     "vim.commandLineModeKeyBindings": [
-
     ],
     "window.autoDetectColorScheme": true,
     "workbench.colorTheme": "Default Light Modern",
