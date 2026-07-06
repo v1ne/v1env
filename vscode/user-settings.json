@@ -1,0 +1,20 @@
+{
+    "keyboard.dispatch": "keyCode",
+    "workbench.colorTheme": "Default Light Modern",
+    "vim.handleKeys": {
+        "<C-a>": true,
+        "<C-b>": false,
+        "<C-f>": false,
+        "<C-j>": false,
+        "<C-p>": false,
+        "<C-r>": true,
+        "<C-v>": false,
+        "<C-w>": false
+    },
+    "editor.minimap.enabled": false,
+    "vim.commandLineModeKeyBindings": [
+
+    ],
+    "cmake.skipConfigureIfCachePresent": true,
+    "window.autoDetectColorScheme": true
+}
