@@ -323,6 +323,7 @@ fi
 alias v1-sync-env="(cd \"$V1ENV\" && git pull-rebase-push && cd \"$V1ENVPRIVATE\" && git pull-rebase-push)" # Pull-Push V1ENV
 alias lvared="IFS=\$'\n' vared" # vared with one line per entry for arrays
 alias lvim='vim *(.om[1]^D)' # edit newest file (excluding dot files)
+alias s="git status"
 
 # Treat ^,#,~ normally
 unsetopt EXTENDED_GLOB
