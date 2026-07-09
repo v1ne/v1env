@@ -36,7 +36,7 @@ fi
 [ -e .gitconfig ] || ln -s $V1ENV/git/gitconfig .gitconfig
 
 # gsettings
-if which gsettings &> /dev/null; then
+if which gsettings 2>&1 > /dev/null; then
   gsettings set org.gnome.desktop.interface font-antialiasing rgba
   # keyboard settings
   gsettings set org.gnome.desktop.peripherals.keyboard delay 225
