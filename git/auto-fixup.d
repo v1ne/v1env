@@ -27,6 +27,22 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+/* Known bugs:
+ * - Bug 1 — @@ -1 +1 @@ submodule false-positive (5 tests in TestSingleLineFileBug):
+ *   When a file with exactly one line is changed to another single line, git
+ *   produces a hunk header with no comma on either side (@@ -1 +1 @@). The
+ *   script's submodule-detection path calls continue on this, leaving
+ *   currentLine = 0. The subsequent - line sets currentHunk.beginLine = 0, which
+ *   the beginLine > 0 guard in endCurrentHunk() rejects — no hunk is recorded, and the
+ *   script spuriously reports "No lines removed". As a side effect, currentLine leaks
+ *   into subsequent files, causing them to be blamed at the wrong line number.
+ *
+ * - Bug 2 — pure rename blame against HEAD (1 test in TestDiffParsing):
+ *   For a staged pure rename, the script correctly identifies a kWholeFile hunk keyed on
+ *   new.txt, then runs git blame HEAD -- new.txt. But new.txt doesn't exist in HEAD
+ *   (only old.txt does), so git blame fails and the script exits with a git command error.
+ */
+
 module autoFixup;
 
 immutable auto branchFileName = ".config/v1/git_named_branches";

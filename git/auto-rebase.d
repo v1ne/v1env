@@ -27,6 +27,75 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+
+/*
+ * Known bugs:
+
+  BUG 1: Dry-run exit code is always 1 (not 0)
+  Location: auto-rebase.d:277
+
+  if(parms.dryRun) return true; In D, true → 1 when returned as int. So -n
+  always exits with status 1 (failure), even on success. The "Nothing to rebase"
+  path returns 0, so the exit code is inconsistent between success states.
+
+  Evidence: Every -n invocation in my tests exits with code 1.
+
+
+  BUG 2: Fixup targeting the root commit crashes
+  Location: auto-rebase.d:134
+  (parentCommit) combined with auto-rebase.d:214, 270
+
+  string parentCommit(string commit) { return commit.empty ? "" : commit ~ "^";
+  } If a fixup targets the root commit, parentCommit returns <root>^, which is
+  not a valid git ref. Then revParse fails and the program dies with fatal: bad
+  revision.
+
+  Reproduction:
+
+  commit 1: "root" commit 2: "fixup! root" $ auto-rebase.d -F -n → Git command
+  "git rev-parse 116500c^ --" failed: fatal: bad revision '116500c^'
+
+
+  BUG 3: Ambiguous title matching picks newest, not target Location:
+  auto-rebase.d:168-197 (earliestMentionedTitle)
+
+  When two commits share the same subject line (e.g., "Update docs"), a fixup!
+  Update docs matches the newest commit with that title, not necessarily the
+  intended target. The assoc-array key collision also means the fixup-hash used
+  for error reporting may not be the intended one.
+
+  Reproduction: Created two "Update docs" commits on either side of
+  origin/master; fixup resolved to the newer one.
+
+
+  BUG 4: Duplicate fixup targets collapse in assocArray Location:
+  auto-rebase.d:155-166 (toOriginalTitleToHashMap)
+
+  If multiple fixups reference the same target title, they all produce the same
+  map key, and .assocArray keeps only one value. This means:
+
+  Only one fixup-commit hash survives for error reporting.  If that single fixup
+  can't be resolved, the "Unable to resolve" message lists it once instead of
+  listing all duplicates.
+
+
+  BUG 5: Unused start parameter Location:
+  auto-rebase.d:168
+
+  string earliestMentionedTitle(string start, string[string] titlesToHashes)
+  start is always passed as "HEAD" but never referenced in the body. Dead code —
+  if the intent was to scope the log walk, the bug is that it isn't.
+
+
+  BUG 6: origin/master is hardcoded Location:
+  auto-rebase.d:221
+
+  auto possibleBases = ["origin/master"]; No way to configure the upstream.
+  Repos using main, a different remote, or no remote at all get silently wrong
+  behavior. --ignore-missing masks the missing ref rather than producing a clear
+  error.
+ */
+
 module autoRebase;
 
 immutable auto branchFileName = ".config/v1/git_named_branches";
