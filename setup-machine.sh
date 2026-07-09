@@ -53,6 +53,12 @@ if ! [ -e .config/mako ]; then
   ln -s $V1ENV/sway/mako/config .config/mako/config
 fi
 
+# neovim
+if ! [ -e .config/nvim ]; then
+  mkdir -p .config/nvim
+  ln -s $V1ENV/vim/init.vim .config/nvim/init.vim
+fi
+
 # Sway
 if ! [ -e .config/sway ]; then
 	mkdir -p .config/sway

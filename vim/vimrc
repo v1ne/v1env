@@ -1,13 +1,34 @@
 if &t_Co > 1 || has("gui_running")
   syntax on
-  set termguicolors
-  if $V1_TERM_DARKMODE
-    set background=dark
-  else
-    set background=light
-  endif
-  colorscheme gruvbox
   set number
+  set termguicolors
+
+  function! ApplyColorScheme()
+    if empty($SSH_CLIENT) && empty($SSH_TTY)
+      let l:cs = trim(system("gsettings get org.freedesktop.appearance color-scheme 2>/dev/null"))
+      if l:cs == ""
+        let l:cs = trim(system("gsettings get org.gnome.desktop.interface color-scheme 2>/dev/null"))
+      endif
+      if l:cs == "'prefer-dark'"
+        set background=dark
+      else
+        set background=light
+      endif
+    endif
+
+    colorscheme gruvbox
+  endfunction
+
+  call ApplyColorScheme()
+  command! Rescheme call s:ApplyColorSchemeAndBackground()
+  if has('nvim')
+"    autocmd FocusGained * call ApplyColorScheme() " avoid as it causes flicker
+    lua << EOF
+  vim.uv.new_signal():start("sigusr1", vim.schedule_wrap(function()
+    vim.cmd("call ApplyColorScheme()")
+  end))
+EOF
+  endif
 endif
 
 if has("gui_running")
@@ -15,6 +36,16 @@ if has("gui_running")
   set guicursor=a:blinkon0
   set guioptions=bgmprT
   set encoding=utf-8
+endif
+
+if has('nvim')
+  " nvim controls the mouse, so emulate terminal behaviour of yanking into
+  " primary X11 paste buffer.
+  xnoremap <silent> <LeftRelease> "*ygv
+  nnoremap <silent> <2-LeftMouse> <2-LeftMouse>"*ygv
+  xnoremap <silent> <2-LeftMouse> <Esc><2-LeftMouse>"*ygv
+  nnoremap <silent> <3-LeftMouse> <3-LeftMouse>"*ygv
+  xnoremap <silent> <3-LeftMouse> <Esc><3-LeftMouse>"*ygv
 endif
 
 set tabstop=2
@@ -56,14 +87,28 @@ nmap _s :%s/\s\+$//<CR>
 nmap _S :%s/^\s\+//<CR>
 nmap _v :%s/^\s+$//<CR>
 
-" quick toggle paste mode
-set pastetoggle=qP
+" quick disable auto-intent magic (formerly: mis-use vim paste-toggle for it)
+function! ToggleIndent()
+  if &autoindent || &smartindent || &cindent || !empty(&indentexpr)
+    let g:saved_indentexpr = &l:indentexpr
+    setlocal noautoindent nosmartindent nocindent indentexpr=
+  else
+    let &l:indentexpr = get(g:, 'saved_indentexpr', '')
+    setlocal autoindent smartindent
+  endif
+endfunction
+inoremap qP <Cmd>call ToggleIndent()<CR>
 
 " Shift-Up,Down,Home,End: Move inside wrapped lines
 inoremap <buffer> <silent> <S-Up>   <C-o>gk
 inoremap <buffer> <silent> <S-Down> <C-o>gj
 inoremap <buffer> <silent> <S-Home> <C-o>g<Home>
 inoremap <buffer> <silent> <S-End>  <C-o>g<End>
+" Workaround for broken embedded FW on X210ai:
+inoremap <buffer> <silent> gT >
+inoremap <buffer> <silent> lT <
+inoremap <buffer> <silent> pP \|
+inoremap <buffer> <silent> Nb #
 
 " move current line up/down
 nnoremap <A-j> :m .+1<CR>==
@@ -85,9 +130,9 @@ cnoremap sudow w !sudo tee % >/dev/null
 
 " highlight trailing whitespace and tabs after spaces in leading whitespace
 highlight ExtraWhitespace ctermbg=red guibg=red
-autocmd BufWinEnter *.c match ExtraWhitespace /^\s* 	\|\s\+$/
-autocmd InsertEnter *.c match ExtraWhitespace /^\s* 	\|\s\+\%#\@<!$/
-autocmd InsertLeave *.c match ExtraWhitespace /^\s* 	\|\s\+$/
+autocmd BufWinEnter *.c match ExtraWhitespace /^\s*   \|\s\+$/
+autocmd InsertEnter *.c match ExtraWhitespace /^\s*   \|\s\+\%#\@<!$/
+autocmd InsertLeave *.c match ExtraWhitespace /^\s*   \|\s\+$/
 autocmd BufWinLeave *.c call clearmatches()
 
 " Sort words of a line
