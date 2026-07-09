@@ -1,6 +1,18 @@
 exec systemctl --user import-environment DISPLAY WAYLAND_DISPLAY SWAYSOCK
 exec dbus-update-activation-environment --systemd DISPLAY WAYLAND_DISPLAY SWAYSOCK XDG_CURRENT_DESKTOP=sway
 exec wl-paste -t text --watch clipman store --no-persist
+exec mako
+exec "(sleep 1; ~/.local/share/darkman/mako.sh $(darkman get))&" # set the right scheme after login
+exec_always ~/.local/share/darkman/sway.sh
+exec nm-applet --indicator
+
+
+exec swayidle -w \
+    timeout 300  'swaylock -f' \
+    timeout 600  'swaymsg "output * power off"' \
+    before-sleep "$V1ENV/sway/lid-guard.py lock" \
+    after-resume "$V1ENV/sway/lid-guard.py maybe-unlock"
+#    after-resume 'swaymsg "output * power on"' -- legacy, unnecessary
 
 set $mod Mod1
 
@@ -23,7 +35,7 @@ input type:touchpad {
 input type:keyboard {
 	xkb_layout de
 	xkb_variant nodeadkeys
-	xkb_options caps:swapescape
+	xkb_options caps:swapescape,compose:menu
 	repeat_delay 225
 	repeat_rate 32
 }
@@ -34,9 +46,7 @@ force_display_urgency_hint 500 ms
 
 # start a terminal
 bindsym $mod+Return exec alacritty
-bindsym $mod+Shift+Return exec alacritty
-bindsym $mod+Ctrl+Return exec env V1_TERM_DARKMODE=1 xterm -name XTermD -title fxterm
-bindsym $mod+Ctrl+Shift+Return exec env V1_TERM_DARKMODE=1 xterm -name XTermD
+bindsym $mod+Shift+Return exec "alacritty --class floating"
 
 # kill focused window
 bindsym $mod+q kill
@@ -211,32 +221,22 @@ bindsym --locked XF86AudioNext exec playerctl next
 bindsym --locked XF86AudioPrev exec playerctl previous
 bindsym --locked XF86AudioStop exec playerctl stop
 bindsym XF86ScreenSaver exec swaylock
+bindsym $mod+Ctrl+Shift+q exec swaylock
 bindsym --locked XF86PowerOff exec --no-startup-id systemctl poweroff
 bindsym $mod+Ctrl+Delete exec swaymsg exit
 bindsym --locked XF86Launch1 exec --no-startup-id systemctl suspend
-#bindsym XF86Display exec --no-startup-id theme-switcher.sh
+bindsym XF86Display exec --no-startup-id darkman toggle
 
 ##############################################################################
 ## program quirks
 ##############################################################################
 
-# always float pop-ups
 for_window [window_role="^pop-up$"] floating enable
-
-# xterm magic
-# goal:
-# - float new float xterms
-for_window [class="^XTermD?$"] border pixel 2
-for_window [class="^XTermD?$"  title="^fxterm$"] floating enable
+for_window [app_id="^floating$"] border pixel 2, floating enable
 
 # gkrellm: always float
 for_window [class="^Gkrellm$"] border none
 for_window [class="^Gkrellm$"] floating enable
-
-# Psi
-for_window [class="^psi\+$" instance="^event$"] floating enable
-for_window [class="^psi\+$" instance="^event$"] floating enable
-for_window [class="^psi\+$" title="^Transfermanager$"] floating enable
 
 ## Firefox – dumm hoch drei. -_- Gibt nicht heraus, um was für ein Fenster es sich handelt
 #for_window [class="^Firefox$"] floating enable

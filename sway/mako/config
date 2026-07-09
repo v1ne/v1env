@@ -1,0 +1,50 @@
+# Kimbie palette. Colours switch at runtime via `makoctl mode -s <dark|light>`
+# (driven by darkman). The baseline below is the Kimbie dark set, so it looks
+# right before darkman first fires.
+
+font=sans-serif 11
+width=380
+height=160
+outer-margin=14
+margin=10
+padding=14
+border-size=2
+border-radius=10
+icons=1
+max-icon-size=48
+max-visible=5
+anchor=top-right
+default-timeout=6000
+
+background-color=#221a0fee
+text-color=#d3af86
+border-color=#7d6f48
+progress-color=over #5d90cd44
+
+[urgency=low]
+default-timeout=4000
+
+[urgency=high]
+border-size=3
+border-color=#c87e5a
+default-timeout=0
+
+# Kimbie dark
+[mode=dark]
+background-color=#221a0fee
+text-color=#d3af86
+border-color=#7d6f48
+progress-color=over #5d90cd44
+
+[mode=dark urgency=high]
+border-color=#c87e5a
+
+# Kimbie light
+[mode=light]
+background-color=#fbebd4ee
+text-color=#6e5346
+border-color=#d0b48f
+progress-color=over #7cafc244
+
+[mode=light urgency=high]
+border-color=#d43552

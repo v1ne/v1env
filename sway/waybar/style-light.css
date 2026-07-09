@@ -1,0 +1,101 @@
+/* Kimbie light for waybar — v1env. Glyphs come from "Symbols Nerd Font". */
+
+* {
+  font-family: "JetBrains Mono", "Symbols Nerd Font", "DejaVu Sans", sans-serif;
+  font-size: 13px;
+  min-height: 0;
+  border-radius: 0;
+}
+
+window#waybar {
+  background: #fbebd4;
+  color: #4a3631;
+}
+
+/* left: workspaces --------------------------------------------------------- */
+#workspaces button {
+  margin: 0;
+  padding: 0 4px;
+  color: #6e5346;
+  background: transparent;
+}
+
+#workspaces button.focused {
+  color: #fbebd4;
+  background: #5d90cd;
+}
+
+#workspaces button.urgent {
+  color: #fbebd4;
+  background: #d43552;
+}
+
+#workspaces button:hover {
+  background: #f7e4c6;
+  color: #4a3631;
+}
+
+#mode {
+  color: #c87e5a;
+  padding: 0 8px;
+}
+
+/* right-side modules -------------------------------------------------------- */
+#idle_inhibitor,
+#pulseaudio,
+#network,
+#cpu,
+#memory,
+#temperature,
+#backlight,
+#battery,
+#clock,
+#tray,
+#scratchpad,
+#window {
+  padding: 0 6px;
+}
+
+#window {
+  color: #6e5346;
+}
+
+#clock {
+  color: #4a3631;
+}
+
+#idle_inhibitor.activated {
+  color: #c87e5a;
+}
+
+#temperature.critical,
+#pulseaudio.muted {
+  color: #d43552;
+}
+
+#battery.warning {
+  color: #c87e5a;
+}
+
+#battery.critical {
+  color: #d43552;
+}
+
+@keyframes blink {
+  to {
+    color: #fbebd4;
+    background: #d43552;
+  }
+}
+
+#battery.critical:not(.charging) {
+  animation: blink 1s steps(2, start) infinite;
+}
+
+#battery.charging {
+  color: #879a6b;
+}
+
+#network.disconnected {
+  color: #d43552;
+}
