@@ -8,6 +8,7 @@ if [ -z "$SWAYSOCK" ]; then
 fi
 
 # Color columns: border background text indicator child_border
+(
 case "${1:-$(darkman get 2>/dev/null)}" in
   light)
     swaymsg "client.focused          #5d90cd #5d90cd #fbebd4 #5d90cd #5d90cd"
@@ -24,3 +25,4 @@ case "${1:-$(darkman get 2>/dev/null)}" in
     swaymsg "client.background        #221a0f"
     ;;
 esac
+) 2>/dev/null
