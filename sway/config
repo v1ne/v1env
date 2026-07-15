@@ -10,9 +10,9 @@ exec nm-applet --indicator
 exec swayidle -w \
     timeout 300  'swaylock -f' \
     timeout 600  'swaymsg "output * power off"' \
+      resume 'swaymsg "output * power on"' \
     before-sleep "$V1ENV/sway/lid-guard.py lock" \
     after-resume "$V1ENV/sway/lid-guard.py maybe-unlock"
-#    after-resume 'swaymsg "output * power on"' -- legacy, unnecessary
 
 set $mod Mod1
 
