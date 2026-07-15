@@ -367,12 +367,12 @@ auto commitsPreviouslyModifyingChangedLinesIn(
 auto baseCommitsFromFixupAndSquashes(
     const ref Parameters parms, CommitHashAndTitle[] potentialBaseCommits) {
   CommitHashAndTitle[] baseCommits = potentialBaseCommits
-    .map!(commit => {
+    .map!((commit) {
         auto title = commit.title;
         while (title.startsWith("fixup! ") || title.startsWith("squash! "))
           title = title[title.indexOf(' ')+1..$];
         return CommitHashAndTitle(commit.hash, commit.time, title);
-      }())
+      })
     .array;
 
   // Keep oldest commit ("base commit"), not some newer commit ("fixup! fixup! fixup! base commit")
