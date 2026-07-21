@@ -32,8 +32,8 @@
         "format-source-muted": "",
         "format-icons": {
             "headphone": "",
-            "hands-free": "",
-            "headset": "",
+            "hands-free": "",
+            "headset": "",
             "phone": "",
             "portable": "",
             "car": "",
@@ -52,11 +52,11 @@
         "on-click-right": "pgrep -x nm-applet >/dev/null || nm-applet"
     },
     "cpu": {
-        "format": "{usage}% ",
+        "format": "{usage}% 󰝨",
         "tooltip": false
     },
     "memory": {
-        "format": "{}% "
+        "format": "{}% "
     },
     "backlight": {
         "format": "{percent}% {icon}",
