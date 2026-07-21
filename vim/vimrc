@@ -109,6 +109,7 @@ inoremap <buffer> <silent> gT >
 inoremap <buffer> <silent> lT <
 inoremap <buffer> <silent> pP \|
 inoremap <buffer> <silent> Nb #
+inoremap <buffer> <silent> tT '
 
 " move current line up/down
 nnoremap <A-j> :m .+1<CR>==
