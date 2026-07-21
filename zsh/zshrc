@@ -32,6 +32,13 @@ fi
 ###### Paths #######
 ####################
 
+if [[ $V1OS != MSYS2 ]]; then
+  export GOPATH="${HOME}/.go"
+  if ! (($path[(Ie)${GOPATH}/bin])); then
+    path=($path ${GOPATH}/bin)
+  fi
+fi
+
 # Add path elements to prepend:
 for mybin in "${HOME}/bin" "${HOME}/.local/bin"; do
   if [[ -e "$mybin" && 0 == ${path[(Ie)$mybin]} ]] ; then

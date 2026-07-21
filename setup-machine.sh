@@ -25,11 +25,19 @@ if ! [ -e .config/environment.d/50-local-bin.conf ]; then
   # make .local/bin available to the compositor
   mkdir -p .config/environment.d
   cat > .config/environment.d/50-local-bin.conf << EOF
-PATH="$PATH:${HOME}/.local/bin"
+PATH="\$PATH:\$HOME/.local/bin:\$HOME/.go/bin"
 EOF
+fi
+if ! [ -e .config/environment.d/51-v1env.conf ]; then
   cat > .config/environment.d/51-v1env.conf << EOF
 V1ENV=$V1ENV
 EOF
+fi
+if ! [ -e .config/environment.d/52-gopath.conf ]; then
+  cat > .config/environment.d/52-gopath.conf << EOF
+GOPATH="\${HOME}/.go"
+EOF
+export GOPATH="${HOME}/.go"
 fi
 
 # Git
