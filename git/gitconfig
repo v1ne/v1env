@@ -68,6 +68,9 @@
   dum = !git dh `git rev-parse --abbrev-ref --symbolic-full-name @{u}| sed 'sx/.*xx'`/master..HEAD
   dur = !git diff `git rev-parse --abbrev-ref --symbolic-full-name @{u}`..HEAD
 
+  # edit, add, X --continue
+  earc = "!f() { files=$(git diff --name-only --diff-filter=U); [ -z \"$files\" ] && { echo 'no conflicts'; return 0; }; $EDITOR $files; if git grep -lE '^(<{7}|={7}|>{7}|\\|{7})' -- $files; then echo 'conflict markers remain; not staging'; return 1; fi; git add -- $files && git resume --continue; }; f"
+
   # Fetch
   fp = fetch --prune --recurse-submodules=on-demand
   fpq = fetch --prune --recurse-submodules=on-demand -q
@@ -99,14 +102,16 @@
   # Push with a bit of force
   puf = push --force-with-lease
 
-  # Rebase
-  r = rebase
+  # Resume any of the operations that can stall for interactive conflict-fixing
+  resume = "!f() { [ $# -eq 0 ] && set -- --continue; d=$(git rev-parse --git-dir); if [ -d \"$d/rebase-merge\" ] || [ -d \"$d/rebase-apply\" ]; then git rebase \"$@\"; elif [ -f \"$d/CHERRY_PICK_HEAD\" ]; then git cherry-pick \"$@\"; elif [ -f \"$d/REVERT_HEAD\" ]; then git revert \"$@\"; elif [ -f \"$d/MERGE_HEAD\" ]; then git merge \"$@\"; else echo 'nothing in progress'; return 1; fi; }; f"
+  r = resume
   # Rechtsanwalt
-  ra = rebase --abort
-  rc = rebase --continue
+  ra = resume --abort
+  rc = resume --continue
+  rs = resume --skip
+
   ri = rebase -i
   ria = rebase -i --autosquash
-  rs = rebase --skip
   # Rebase Current Branch
   rcb = "!${V1ENV}/git/rebase-current-branch.d"
   rcba = "!${V1ENV}/git/rebase-current-branch.d" --autosquash
