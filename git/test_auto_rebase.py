@@ -92,14 +92,18 @@ class GitRepo:
 
     def run_auto_rebase(self, *args: str) -> Tuple[int, str, str]:
         """Run auto-rebase.d and return (returncode, stdout, stderr)."""
-        # Path to auto-rebase.d in the original repo
-        script_path = Path(__file__).parent / "auto-rebase.d"
-
         # Change HOME to temp dir so it looks for .config/v1/git_named_branches there
         env = os.environ.copy()
         env["HOME"] = str(self.repo_path)
 
-        cmd = ["rdmd", str(script_path)] + list(args)
+        # Check if AUTO_REBASE_BIN is set; if so, use that binary directly
+        if "AUTO_REBASE_BIN" in os.environ:
+            cmd = [os.environ["AUTO_REBASE_BIN"]] + list(args)
+        else:
+            # Use the D version with rdmd
+            script_path = Path(__file__).parent / "auto-rebase.d"
+            cmd = ["rdmd", str(script_path)] + list(args)
+
         result = subprocess.run(
             cmd,
             cwd=str(self.repo_path),

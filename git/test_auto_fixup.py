@@ -13,12 +13,13 @@ Key behaviours documented by these tests:
 """
 
 import os
+import re
 import shutil
 import subprocess
 import tempfile
 import unittest
 
-SCRIPT_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'auto-fixup.d')
+SCRIPT_PATH = os.environ.get('AUTO_FIXUP_BIN') or os.path.join(os.path.dirname(os.path.abspath(__file__)), 'auto-fixup.d')
 
 
 class AutoFixupBase(unittest.TestCase):
@@ -841,6 +842,732 @@ class TestPermissionChanges(AutoFixupBase):
         r = self._run()
         self.assertEqual(r.returncode, 1)
         self.assertIn('multiple base commits', r.stderr)
+
+
+# ═════════════════════════════════════════════════════════════════════════════
+# Chunked mode: -c / --chunked  (see git/go/DESIGN-auto-fixup-chunked.md)
+#
+# Without -c, changes whose removed lines resolve to several commits are refused
+# wholesale.  With -c, the script works per *diff hunk* (the @@ blocks Git
+# frontends let you stage individually): every hunk whose removed lines resolve
+# to a unique commit gets its own fixup, hunks that stay ambiguous are left
+# behind in the working tree / index.
+#
+# Exit code: 0 only when NOTHING is left over.  Any leftover hunk yields exit 1 —
+# the same code the whole-file attempt would have given — so callers still see
+# that manual attention is required.  The fixups created so far are kept.
+#
+# Only the Go implementation grows this flag; the tests below are skipped for
+# binaries whose --help does not advertise --chunked.
+# ═════════════════════════════════════════════════════════════════════════════
+
+def _supports_chunked():
+    try:
+        r = subprocess.run([SCRIPT_PATH, '--help'], capture_output=True, text=True)
+    except OSError:
+        return False
+    return '--chunked' in r.stdout
+
+
+CHUNKED_SUPPORTED = _supports_chunked()
+requires_chunked = unittest.skipUnless(
+    CHUNKED_SUPPORTED, 'binary under test does not support --chunked')
+
+
+@requires_chunked
+class TestChunkedMode(AutoFixupBase):
+    """-c fixes up hunk by hunk instead of bailing out on ambiguity."""
+
+    # ── helpers ──────────────────────────────────────────────────────────────
+
+    def _two_region_file(self):
+        """file.txt whose lines 1-10 come from 'Commit A' and 11-20 from 'Commit B'.
+
+        Returns (hash_a, hash_b).  Modifying one line in each region yields two
+        separate diff hunks (the 10-line gap exceeds git's 3 context lines)."""
+        a = ''.join(f'a{i}\n' for i in range(1, 11))
+        b = ''.join(f'b{i}\n' for i in range(1, 11))
+        self._write('file.txt', a)
+        hash_a = self._commit('Commit A', ts=1_000_001)
+        self._write('file.txt', a + b)
+        hash_b = self._commit('Commit B', ts=1_000_002)
+        return hash_a, hash_b
+
+    def _edit(self, relpath, replacements):
+        """Rewrite relpath applying {1-based line number: new text} replacements."""
+        path = os.path.join(self.repo, relpath)
+        with open(path) as f:
+            lines = f.read().splitlines()
+        for lineno, text in replacements.items():
+            lines[lineno - 1] = text
+        self._write(relpath, '\n'.join(lines) + '\n')
+
+    def _worktree_diff(self):
+        return self._git('diff', 'HEAD').stdout
+
+    def _index_diff(self):
+        return self._git('diff', '--staged').stdout
+
+    def _file(self, relpath):
+        with open(os.path.join(self.repo, relpath)) as f:
+            return f.read()
+
+    # ── the core promise ─────────────────────────────────────────────────────
+
+    def test_without_chunked_two_commits_still_refused(self):
+        """Baseline: the very same change is refused without -c."""
+        self._two_region_file()
+        self._edit('file.txt', {3: 'MOD_A', 15: 'MOD_B'})
+        r = self._run()
+        self.assertEqual(r.returncode, 1)
+        self.assertIn('multiple base commits', r.stderr)
+        self.assertEqual(self._commit_count(), 2)
+
+    def test_two_hunks_two_commits_both_fixed_up(self):
+        """Each hunk resolves uniquely → one fixup per base commit, tree clean."""
+        self._two_region_file()
+        self._edit('file.txt', {3: 'MOD_A', 15: 'MOD_B'})
+        r = self._run('--chunked')
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertEqual(self._log_subjects()[:2], ['fixup! Commit B', 'fixup! Commit A'])
+        self.assertEqual(self._worktree_diff(), '')
+
+    def test_short_flag(self):
+        """-c is the short form of --chunked."""
+        self._two_region_file()
+        self._edit('file.txt', {3: 'MOD_A', 15: 'MOD_B'})
+        r = self._run('-c')
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertEqual(self._commit_count(), 4)
+
+    def test_oldest_base_commit_fixed_up_first(self):
+        """Fixups are created oldest base commit first (log lists them newest-first)."""
+        self._two_region_file()
+        self._edit('file.txt', {3: 'MOD_A', 15: 'MOD_B'})
+        self._run('-c')
+        self.assertEqual(self._log_subjects(),
+                         ['fixup! Commit B', 'fixup! Commit A', 'Commit B', 'Commit A'])
+
+    def test_each_fixup_contains_only_its_own_hunk(self):
+        """The fixup for Commit A carries MOD_A only, and vice versa."""
+        self._two_region_file()
+        self._edit('file.txt', {3: 'MOD_A', 15: 'MOD_B'})
+        self._run('-c')
+        show_b = self._git('show', 'HEAD').stdout
+        show_a = self._git('show', 'HEAD~1').stdout
+        self.assertIn('+MOD_A', show_a)
+        self.assertNotIn('+MOD_B', show_a)
+        self.assertIn('+MOD_B', show_b)
+        self.assertNotIn('+MOD_A', show_b)
+
+    def test_three_hunks_three_commits(self):
+        """Scales beyond two: three regions → three fixups."""
+        a = ''.join(f'a{i}\n' for i in range(1, 11))
+        b = ''.join(f'b{i}\n' for i in range(1, 11))
+        c = ''.join(f'c{i}\n' for i in range(1, 11))
+        self._write('file.txt', a)
+        self._commit('Commit A', ts=1_000_001)
+        self._write('file.txt', a + b)
+        self._commit('Commit B', ts=1_000_002)
+        self._write('file.txt', a + b + c)
+        self._commit('Commit C', ts=1_000_003)
+        self._edit('file.txt', {3: 'MOD_A', 15: 'MOD_B', 25: 'MOD_C'})
+        r = self._run('-c')
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertEqual(self._log_subjects()[:3],
+                         ['fixup! Commit C', 'fixup! Commit B', 'fixup! Commit A'])
+        self.assertEqual(self._worktree_diff(), '')
+
+    def test_hunks_in_different_files(self):
+        """Hunks are attributed per file, too."""
+        self._write('file1.txt', 'line1\nfiller\n')
+        self._commit('Commit A', ts=1_000_001)
+        self._write('file2.txt', 'line2\nfiller\n')
+        self._commit('Commit B', ts=1_000_002)
+        self._write('file1.txt', 'modified1\nfiller\n')
+        self._write('file2.txt', 'modified2\nfiller\n')
+        r = self._run('-c')
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertEqual(self._log_subjects()[:2], ['fixup! Commit B', 'fixup! Commit A'])
+        self.assertEqual(self._worktree_diff(), '')
+
+    def test_hunks_of_same_commit_share_one_fixup(self):
+        """Two hunks resolving to the same commit produce a single fixup commit."""
+        a = ''.join(f'a{i}\n' for i in range(1, 31))
+        self._write('file.txt', a)
+        self._commit('Commit A')
+        self._edit('file.txt', {3: 'MOD_1', 25: 'MOD_2'})
+        r = self._run('-c')
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertEqual(self._log_subjects(), ['fixup! Commit A', 'Commit A'])
+        self.assertEqual(self._worktree_diff(), '')
+
+    def test_two_removed_runs_in_one_hunk_same_commit(self):
+        """A single @@ hunk may hold several runs of removed lines; one commit → fixed."""
+        a = ''.join(f'a{i}\n' for i in range(1, 11))
+        self._write('file.txt', a)
+        self._commit('Commit A')
+        # lines 3 and 6 are close enough to land in the same @@ hunk
+        self._edit('file.txt', {3: 'MOD_1', 6: 'MOD_2'})
+        r = self._run('-c')
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertEqual(self._log_subjects(), ['fixup! Commit A', 'Commit A'])
+        self.assertEqual(self._worktree_diff(), '')
+
+    # ── hunks that must be left alone ────────────────────────────────────────
+
+    def _ambiguous_hunk_setup(self):
+        """file.txt: line 5 last touched by 'Commit B', its neighbours by 'Commit A'.
+
+        Changing lines 4+5 together yields ONE hunk with removed lines from two
+        commits — not attributable even in chunked mode."""
+        a = ''.join(f'a{i}\n' for i in range(1, 11))
+        self._write('file.txt', a)
+        self._commit('Commit A', ts=1_000_001)
+        self._edit('file.txt', {5: 'b5'})
+        self._commit('Commit B', ts=1_000_002)
+
+    def test_ambiguous_hunk_alone_is_refused(self):
+        """A single hunk mixing two commits is still refused: nothing to do."""
+        self._ambiguous_hunk_setup()
+        self._edit('file.txt', {4: 'MOD_4', 5: 'MOD_5'})
+        before = self._worktree_diff()
+        r = self._run('-c')
+        self.assertEqual(r.returncode, 1)
+        self.assertIn('multiple base commits', r.stderr)
+        self.assertEqual(self._commit_count(), 2)
+        self.assertEqual(self._worktree_diff(), before)
+
+    def test_ambiguous_hunk_left_over_while_others_are_fixed(self):
+        """The unique hunk is committed, the ambiguous one stays — and that is exit 1."""
+        a = ''.join(f'a{i}\n' for i in range(1, 11))
+        b = ''.join(f'b{i}\n' for i in range(1, 11))
+        self._write('file.txt', a)
+        self._commit('Commit A', ts=1_000_001)
+        self._write('file.txt', a + b)
+        self._commit('Commit B', ts=1_000_002)
+        # line 5 gets re-touched by a third commit, so lines 4+5 mix A and C
+        self._edit('file.txt', {5: 'c5'})
+        self._commit('Commit C', ts=1_000_003)
+
+        self._edit('file.txt', {4: 'MOD_4', 5: 'MOD_5', 15: 'MOD_B'})
+        r = self._run('-c')
+        self.assertEqual(r.returncode, 1)  # something is left over
+        self.assertEqual(self._log_subjects()[0], 'fixup! Commit B')
+        self.assertEqual(self._commit_count(), 4)
+
+        leftover = self._worktree_diff()
+        self.assertIn('+MOD_4', leftover)
+        self.assertIn('+MOD_5', leftover)
+        self.assertNotIn('+MOD_B', leftover)
+        self.assertIn('left over', r.stdout)
+        self.assertIn('multiple base commits', r.stderr)
+
+    def test_addition_only_hunk_left_over(self):
+        """A hunk that only adds lines has no base commit → left over, exit 1."""
+        a = ''.join(f'a{i}\n' for i in range(1, 11))
+        b = ''.join(f'b{i}\n' for i in range(1, 11))
+        self._write('file.txt', a)
+        self._commit('Commit A', ts=1_000_001)
+        self._write('file.txt', a + b)
+        self._commit('Commit B', ts=1_000_002)
+        # hunk 1: pure insertion after line 2; hunk 2: modification inside B's region
+        lines = self._file('file.txt').splitlines()
+        lines.insert(2, 'INSERTED')
+        lines[15] = 'MOD_B'
+        self._write('file.txt', '\n'.join(lines) + '\n')
+
+        r = self._run('-c')
+        self.assertEqual(r.returncode, 1)
+        self.assertEqual(self._log_subjects()[0], 'fixup! Commit B')
+        leftover = self._worktree_diff()
+        self.assertIn('+INSERTED', leftover)
+        self.assertNotIn('+MOD_B', leftover)
+
+    def test_working_tree_content_is_preserved(self):
+        """Whatever ends up committed, the file on disk keeps the user's content."""
+        self._two_region_file()
+        self._edit('file.txt', {3: 'MOD_A', 15: 'MOD_B'})
+        expected = self._file('file.txt')
+        self._run('-c')
+        self.assertEqual(self._file('file.txt'), expected)
+
+    def test_exit_code_0_only_when_nothing_is_left_over(self):
+        """The same repo fails while a hunk remains and succeeds once none does.
+
+        Guards the exit-code contract against 'created something → success'."""
+        a = ''.join(f'a{i}\n' for i in range(1, 11))
+        b = ''.join(f'b{i}\n' for i in range(1, 11))
+        self._write('file.txt', a)
+        self._commit('Commit A', ts=1_000_001)
+        self._write('file.txt', a + b)
+        self._commit('Commit B', ts=1_000_002)
+        self._edit('file.txt', {5: 'c5'})
+        self._commit('Commit C', ts=1_000_003)
+
+        # ambiguous hunk (lines 4+5 mix A and C) + a clean one
+        self._edit('file.txt', {4: 'MOD_4', 5: 'MOD_5', 15: 'MOD_B'})
+        r = self._run('-c')
+        self.assertEqual(r.returncode, 1)
+        self.assertIn('left over', r.stdout)
+
+        # revert the ambiguous edit and make an unambiguous one instead → success
+        self._edit('file.txt', {4: 'a4', 5: 'c5', 8: 'MOD_8'})
+        r = self._run('-c')
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertNotIn('left over', r.stdout)
+        self.assertEqual(self._worktree_diff(), '')
+
+    # ── line-number bookkeeping across rounds ────────────────────────────────
+    #
+    # Committing a hunk moves HEAD, so every hunk below it shifts by that hunk's
+    # net line delta.  An implementation that reuses the line numbers computed
+    # before the first fixup does not fail loudly — the stale ranges still blame
+    # fine, just to the wrong lines.  The two tests below are built so that the
+    # stale ranges give *plausible but wrong* answers:
+    #   - the ambiguous middle hunk looks unique (→ wrongly fixed up), and
+    #   - the bottom hunk lands in a neighbouring region (→ wrong base commit).
+    # Both are verified against real git in the layouts below.
+
+    def _four_region_file(self):
+        """file.txt with 60 lines: 1-20 'Commit A', 21-40 'Commit B', 41-60 'Commit D',
+        with line 25 re-touched by 'Commit C'."""
+        a = ''.join(f'a{i}\n' for i in range(1, 21))
+        b = ''.join(f'b{i}\n' for i in range(1, 21))
+        d = ''.join(f'd{i}\n' for i in range(1, 21))
+        self._write('file.txt', a)
+        self._commit('Commit A', ts=1_000_001)
+        self._write('file.txt', a + b)
+        self._commit('Commit B', ts=1_000_002)
+        self._write('file.txt', a + b + d)
+        self._commit('Commit D', ts=1_000_003)
+        self._edit('file.txt', {25: 'c25'})
+        self._commit('Commit C', ts=1_000_004)
+
+    def test_line_numbers_are_recomputed_after_a_shrinking_fixup(self):
+        """First fixup removes 2 lines; the hunks below must still be read correctly.
+
+        Layout (pre-image line numbers):
+          3-5   'a3'-'a5'   → Commit A, replaced by ONE line   (net -2, applied first)
+          24-25 'b4','c25'  → Commit B + Commit C → ambiguous, must stay
+          39    'b19'       → Commit B
+        After the Commit A fixup everything below moves up by 2.  Reading the
+        STALE numbers against the new HEAD gives: 24-25 → 'b6','b7' (Commit B
+        alone — looks unique, would wrongly consume the ambiguous hunk) and
+        39 → 'd1' (Commit D — the wrong commit entirely)."""
+        self._four_region_file()
+        lines = self._file('file.txt').splitlines()
+        lines[38] = 'BOT_B'
+        lines[23], lines[24] = 'MID_1', 'MID_2'
+        lines[2:5] = ['TOP_A']                       # 3 lines → 1 line
+        self._write('file.txt', '\n'.join(lines) + '\n')
+
+        r = self._run('-c')
+        self.assertEqual(r.returncode, 1)            # ambiguous hunk left over
+
+        # exactly two fixups, for A and B — never for C or D
+        self.assertEqual(self._log_subjects(),
+                         ['fixup! Commit B', 'fixup! Commit A',
+                          'Commit C', 'Commit D', 'Commit B', 'Commit A'])
+
+        show_a = self._git('show', 'HEAD~1').stdout
+        self.assertIn('+TOP_A', show_a)
+        self.assertIn('-a3', show_a)
+        self.assertNotIn('MID_', show_a)
+        self.assertNotIn('BOT_B', show_a)
+
+        show_b = self._git('show', 'HEAD').stdout
+        self.assertIn('+BOT_B', show_b)
+        self.assertIn('-b19', show_b)                # not '-d1', not '-b17'
+        self.assertNotIn('MID_', show_b)
+        self.assertNotIn('TOP_A', show_b)
+
+        leftover = self._worktree_diff()
+        self.assertIn('+MID_1', leftover)
+        self.assertIn('+MID_2', leftover)
+        self.assertIn('-b4', leftover)
+        self.assertIn('-c25', leftover)
+        self.assertNotIn('TOP_A', leftover)
+        self.assertNotIn('BOT_B', leftover)
+
+    def test_line_numbers_are_recomputed_after_a_growing_fixup(self):
+        """Mirror image: the first fixup adds 3 lines, shifting the rest down.
+
+        Layout: 3-5 → SIX lines (Commit A, net +3); 24-25 ambiguous (B + C);
+        43 'd3' → Commit D.  Reading the STALE numbers after the Commit A fixup
+        gives 24-25 → 'b1','b2' (looks like Commit B alone) and 43 → 'b20'
+        (Commit B instead of Commit D)."""
+        self._four_region_file()
+        lines = self._file('file.txt').splitlines()
+        lines[42] = 'BOT_D'
+        lines[23], lines[24] = 'MID_1', 'MID_2'
+        lines[2:5] = [f'TOP_{i}' for i in range(1, 7)]   # 3 lines → 6 lines
+        self._write('file.txt', '\n'.join(lines) + '\n')
+
+        r = self._run('-c')
+        self.assertEqual(r.returncode, 1)
+
+        self.assertEqual(self._log_subjects()[:2], ['fixup! Commit D', 'fixup! Commit A'])
+        self.assertEqual(self._commit_count(), 6)
+
+        show_d = self._git('show', 'HEAD').stdout
+        self.assertIn('+BOT_D', show_d)
+        self.assertIn('-d3', show_d)                     # not '-b20'
+        self.assertNotIn('MID_', show_d)
+
+        leftover = self._worktree_diff()
+        self.assertIn('-c25', leftover)
+        self.assertIn('+MID_2', leftover)
+        self.assertNotIn('BOT_D', leftover)
+
+    def test_repeated_runs_converge(self):
+        """Running -c again after a successful round is a no-op, not a re-fixup.
+
+        A stale-line-number implementation tends to keep finding 'work' here."""
+        self._two_region_file()
+        self._edit('file.txt', {3: 'MOD_A', 15: 'MOD_B'})
+        self._run('-c')
+        count = self._commit_count()
+        r = self._run('-c')
+        self.assertEqual(r.returncode, 0)
+        self.assertIn('No files changed', r.stdout)
+        self.assertEqual(self._commit_count(), count)
+
+    # ── named-branch protection ──────────────────────────────────────────────
+
+    def test_hunk_on_named_branch_is_skipped_others_still_fixed(self):
+        """A published hunk is skipped instead of aborting the run — but exit is 1."""
+        hash_a, _ = self._two_region_file()
+        self._set_origin_master(hash_a)
+        self._edit('file.txt', {3: 'MOD_A', 15: 'MOD_B'})
+        r = self._run('-c')
+        self.assertEqual(r.returncode, 1)
+        self.assertEqual(self._log_subjects()[0], 'fixup! Commit B')
+        self.assertEqual(self._commit_count(), 3)
+        self.assertIn('named branch', r.stderr)
+        leftover = self._worktree_diff()
+        self.assertIn('+MOD_A', leftover)
+        self.assertNotIn('+MOD_B', leftover)
+
+    def test_force_warns_like_plain_mode(self):
+        """-f silently overriding the named-branch guard would be a nasty surprise."""
+        hash_a, _ = self._two_region_file()
+        self._set_origin_master(hash_a)
+        self._edit('file.txt', {3: 'MOD_A', 15: 'MOD_B'})
+        r = self._run('-c', '-f', '-n')
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertIn('Warning', r.stdout)
+        self.assertIn('named branch', r.stdout)
+
+    def test_hunk_on_named_branch_with_force(self):
+        """-f lets the published hunk through as well."""
+        hash_a, _ = self._two_region_file()
+        self._set_origin_master(hash_a)
+        self._edit('file.txt', {3: 'MOD_A', 15: 'MOD_B'})
+        r = self._run('-c', '-f')
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertEqual(self._log_subjects()[:2], ['fixup! Commit B', 'fixup! Commit A'])
+        self.assertEqual(self._worktree_diff(), '')
+
+    def test_all_hunks_on_named_branch_exits_1(self):
+        """Nothing fixable at all → exit 1, as in plain mode."""
+        a = ''.join(f'a{i}\n' for i in range(1, 11))
+        self._write('file.txt', a)
+        hash_a = self._commit('Commit A')
+        self._set_origin_master(hash_a)
+        self._edit('file.txt', {3: 'MOD_A'})
+        r = self._run('-c')
+        self.assertEqual(r.returncode, 1)
+        self.assertIn('named branch', r.stderr)
+        self.assertEqual(self._commit_count(), 1)
+
+    # ── scope: staged / unstaged / explicit files ────────────────────────────
+
+    def test_staged_scope_leaves_leftovers_staged(self):
+        """With staged changes, hunks are taken from the index and leftovers stay staged."""
+        a = ''.join(f'a{i}\n' for i in range(1, 11))
+        b = ''.join(f'b{i}\n' for i in range(1, 11))
+        self._write('file.txt', a)
+        self._commit('Commit A', ts=1_000_001)
+        self._write('file.txt', a + b)
+        self._commit('Commit B', ts=1_000_002)
+        self._edit('file.txt', {5: 'c5'})
+        self._commit('Commit C', ts=1_000_003)
+
+        self._edit('file.txt', {4: 'MOD_4', 5: 'MOD_5', 15: 'MOD_B'})
+        self._git('add', 'file.txt')
+        r = self._run('-c')
+        self.assertEqual(r.returncode, 1)  # the ambiguous hunk is left over
+        self.assertEqual(self._log_subjects()[0], 'fixup! Commit B')
+        staged = self._index_diff()
+        self.assertIn('+MOD_4', staged)
+        self.assertNotIn('+MOD_B', staged)
+        self.assertEqual(self._git('diff').stdout, '')  # nothing spilled into the worktree
+
+    def test_staged_scope_ignores_unstaged_changes(self):
+        """Unstaged edits to other files are not swept into the fixups."""
+        self._write('file1.txt', 'line1\nfiller\n')
+        self._commit('Commit A', ts=1_000_001)
+        self._write('file2.txt', 'line2\nfiller\n')
+        self._commit('Commit B', ts=1_000_002)
+        self._write('file1.txt', 'modified1\nfiller\n')
+        self._git('add', 'file1.txt')
+        self._write('file2.txt', 'modified2\nfiller\n')  # unstaged
+        r = self._run('-c')
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertEqual(self._log_subjects()[:1], ['fixup! Commit A'])
+        self.assertIn('+modified2', self._git('diff').stdout)
+
+    def test_explicit_file_arg_limits_scope(self):
+        """Only hunks of the named file are considered."""
+        self._write('file1.txt', 'line1\nfiller\n')
+        self._commit('Commit A', ts=1_000_001)
+        self._write('file2.txt', 'line2\nfiller\n')
+        self._commit('Commit B', ts=1_000_002)
+        self._write('file1.txt', 'modified1\nfiller\n')
+        self._write('file2.txt', 'modified2\nfiller\n')
+        r = self._run('-c', 'file1.txt')
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertEqual(self._log_subjects()[:1], ['fixup! Commit A'])
+        self.assertIn('+modified2', self._worktree_diff())
+
+    def test_dirty_index_outside_scope_refused(self):
+        """Chunked mode commits from the index, so unrelated staged changes are fatal."""
+        self._write('file1.txt', 'line1\nfiller\n')
+        self._commit('Commit A', ts=1_000_001)
+        self._write('file2.txt', 'line2\nfiller\n')
+        self._commit('Commit B', ts=1_000_002)
+        self._write('file2.txt', 'staged2\nfiller\n')
+        self._git('add', 'file2.txt')
+        self._write('file1.txt', 'modified1\nfiller\n')  # unstaged, explicitly selected
+        r = self._run('-c', 'file1.txt')
+        self.assertEqual(r.returncode, 1)
+        self.assertIn('index', r.stderr)
+        self.assertEqual(self._commit_count(), 2)
+
+    def test_dirty_index_inside_scope_refused(self):
+        """A partially staged selected file is refused too, with the same message.
+
+        Its staged content is already in the index, so `git apply --cached` of a
+        hunk taken from the HEAD diff cannot apply on top of it."""
+        self._write('file.txt', 'line1\nfiller\nline3\nline4\n')
+        self._commit('Commit A')
+        self._write('file.txt', 'staged\nfiller\nline3\nline4\n')
+        self._git('add', 'file.txt')
+        self._write('file.txt', 'staged\nfiller\nline3\nunstaged\n')
+        r = self._run('-c', 'file.txt')
+        self.assertEqual(r.returncode, 1)
+        self.assertIn('index', r.stderr)
+        self.assertIn('file.txt', r.stderr)
+        self.assertEqual(self._commit_count(), 1)
+        self.assertIn('+staged', self._index_diff())      # index left untouched
+
+    def test_binary_change_is_counted_as_leftover(self):
+        """A binary file cannot be attributed or applied, so it is a leftover.
+
+        It must not be silently ignored: the text hunk is still fixed up, but the
+        exit code has to report that something remains."""
+        self._write('file.txt', 'line1\nfiller\n')
+        with open(os.path.join(self.repo, 'blob.bin'), 'wb') as f:
+            f.write(b'\x00\x01\x02binary\x00')
+        self._commit('Commit A')
+        self._write('file.txt', 'modified\nfiller\n')
+        with open(os.path.join(self.repo, 'blob.bin'), 'wb') as f:
+            f.write(b'\x00\x09\x02changed\x00')
+
+        r = self._run('-c')
+        self.assertEqual(r.returncode, 1)
+        self.assertEqual(self._log_subjects()[0], 'fixup! Commit A')
+        self.assertIn('blob.bin', r.stderr)
+        self.assertIn('binary', r.stderr)
+        self.assertIn('left over', r.stdout)
+        self.assertIn('blob.bin', self._git('status', '--porcelain').stdout)
+
+    def test_deleted_file_is_fixed_up(self):
+        """A deletion is a hunk like any other — its patch needs the full header.
+
+        Reconstructing it from '--- a/…' alone yields 'git diff header lacks
+        filename information'; the '+++ /dev/null' line has to survive too."""
+        self._write('gone.txt', 'g1\ng2\ng3\n')
+        self._commit('Commit A', ts=1_000_001)
+        self._write('stay.txt', 'line1\nfiller\n')
+        self._commit('Commit B', ts=1_000_002)
+        self._remove('gone.txt')
+        self._write('stay.txt', 'modified\nfiller\n')
+
+        r = self._run('-c')
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertEqual(self._log_subjects()[:2], ['fixup! Commit B', 'fixup! Commit A'])
+        self.assertIn('gone.txt', self._git('show', '--stat', 'HEAD~1').stdout)
+        self.assertEqual(self._worktree_diff(), '')
+        self.assertEqual(self._git('status', '--porcelain').stdout, '')
+
+    def test_no_changes(self):
+        """-c does not change the no-op behaviour."""
+        self._write('file.txt', 'content\nfiller\n')
+        self._commit('Initial')
+        r = self._run('-c')
+        self.assertEqual(r.returncode, 0)
+        self.assertIn('No files changed', r.stdout)
+
+    def test_unambiguous_change_behaves_like_plain_mode(self):
+        """A change with a single base commit yields exactly one fixup, as without -c."""
+        self._write('file.txt', 'line1\nfiller\n')
+        self._commit('Commit A')
+        self._write('file.txt', 'modified\nfiller\n')
+        r = self._run('-c')
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertEqual(self._log_subjects(), ['fixup! Commit A', 'Commit A'])
+        self.assertNotIn('left over', r.stdout)
+
+    # ── interaction with the other options ───────────────────────────────────
+
+    def test_dry_run_creates_nothing_but_lists_all_targets(self):
+        """-c -n reports every fixup it would create and touches nothing."""
+        self._two_region_file()
+        self._edit('file.txt', {3: 'MOD_A', 15: 'MOD_B'})
+        before = self._worktree_diff()
+        r = self._run('-c', '-n')
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertEqual(self._commit_count(), 2)
+        self.assertEqual(self._worktree_diff(), before)
+        self.assertEqual(self._git('diff', '--staged').stdout, '')
+        self.assertIn('Commit A', r.stdout)
+        self.assertIn('Commit B', r.stdout)
+        self.assertEqual(r.stdout.count('Would create'), 2)
+
+    def test_dry_run_reports_leftovers(self):
+        """-c -n names the hunks it would leave behind and fails like the real run."""
+        hash_a, _ = self._two_region_file()
+        self._set_origin_master(hash_a)
+        self._edit('file.txt', {3: 'MOD_A', 15: 'MOD_B'})
+        r = self._run('-c', '-n')
+        self.assertEqual(r.returncode, 1)
+        self.assertEqual(r.stdout.count('Would create'), 1)
+        self.assertIn('left over', r.stdout)
+        self.assertEqual(self._commit_count(), 2)
+
+    def test_dry_run_matches_real_run_across_rounds(self):
+        """Dry run (an in-memory simulation over one diff) and the real run
+        (re-diffing HEAD every round) are two independent algorithms for the
+        same promise. They agree today only because title-collapsing folds a
+        round's new fixup back onto its own base commit before the next round
+        blames again (see DESIGN-auto-fixup-chunked.md). Pin that agreement on
+        a case with more than one round, comparing dry run's "Would create"
+        list against the real run's "Created" list, in order."""
+        self._two_region_file()
+        self._edit('file.txt', {3: 'MOD_A', 15: 'MOD_B'})
+
+        def targets(output, verb):
+            return re.findall(rf'^{verb} .*for base commit (.+)$', output, re.MULTILINE)
+
+        dry = self._run('-c', '-n')
+        self.assertEqual(dry.returncode, 0, dry.stderr)
+        dry_targets = targets(dry.stdout, 'Would create')
+        self.assertEqual(len(dry_targets), 2)  # both rounds simulated
+
+        real = self._run('-c')
+        self.assertEqual(real.returncode, 0, real.stderr)
+        real_targets = targets(real.stdout, 'Created')
+
+        self.assertEqual(dry_targets, real_targets)
+
+    def test_squash_option(self):
+        """-c -s creates squash! commits per hunk."""
+        self._two_region_file()
+        self._edit('file.txt', {3: 'MOD_A', 15: 'MOD_B'})
+        r = self._run('-c', '-s')
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertEqual(self._log_subjects()[:2], ['squash! Commit B', 'squash! Commit A'])
+
+    def test_option_bundling(self):
+        """-cn bundles --chunked and --dry-run."""
+        self._two_region_file()
+        self._edit('file.txt', {3: 'MOD_A', 15: 'MOD_B'})
+        r = self._run('-cn')
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertEqual(self._commit_count(), 2)
+        self.assertEqual(r.stdout.count('Would create'), 2)
+
+    def test_verbose_names_the_skipped_hunk(self):
+        """Skipped hunks are reported with file and line range."""
+        hash_a, _ = self._two_region_file()
+        self._set_origin_master(hash_a)
+        self._edit('file.txt', {3: 'MOD_A', 15: 'MOD_B'})
+        r = self._run('-c', '-v')
+        self.assertEqual(r.returncode, 1)
+        self.assertIn('file.txt', r.stderr)
+        self.assertIn('named branch', r.stderr)
+
+    def test_file_level_change_beside_other_hunks_is_skipped(self):
+        """A chmod/rename is staged with the whole file, so it cannot be split off.
+
+        Taking it while the file has other hunks would drag them into the fixup
+        behind the user's back; leave it for a run where it stands alone."""
+        self._write('file.txt', 'a1\na2\na3\na4\na5\n')
+        self._commit('Commit A')
+        os.chmod(os.path.join(self.repo, 'file.txt'), 0o755)
+        self._write('file.txt', 'a1\na2\na3\na4\na5\nADDED\n')  # pure addition
+
+        r = self._run('-c')
+        self.assertEqual(r.returncode, 1)
+        self.assertEqual(self._commit_count(), 1)
+        self.assertIn('cannot be split', r.stderr)
+        self.assertIn('+ADDED', self._worktree_diff())
+
+    def test_lone_file_level_change_is_still_fixed_up(self):
+        """The split guard must not block a chmod that is the file's only change."""
+        self._write('file.txt', 'a1\na2\na3\na4\na5\n')
+        self._commit('Commit A')
+        os.chmod(os.path.join(self.repo, 'file.txt'), 0o755)
+
+        r = self._run('-c')
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertEqual(self._log_subjects(), ['fixup! Commit A', 'Commit A'])
+        self.assertEqual(self._worktree_diff(), '')
+
+    def test_help_mentions_chunked(self):
+        """--help documents the flag."""
+        r = self._run('--help')
+        self.assertEqual(r.returncode, 0)
+        self.assertIn('--chunked', r.stdout)
+
+
+# ═════════════════════════════════════════════════════════════════════════════
+# Known bug: content lines that look like diff headers
+#
+# Removing a line that reads "-- a/foo" prints as "--- a/foo" in the diff, which
+# a parser keying on line *shape* takes for a file header — the removal is then
+# dropped and the script reports "No lines removed. Cannot fix up.".  The fix is
+# to key on position instead: everything between "diff --git" and the file's
+# first @@ is header, everything after it is content.
+#
+# These tests assert the CORRECT behaviour.  They pass for the Go port (whose
+# two modes share one position-based parser) and are expected to FAIL for the D
+# script, which matches on shape.
+# ═════════════════════════════════════════════════════════════════════════════
+
+class TestHeaderLookalikeLines(AutoFixupBase):
+
+    def test_removed_line_looking_like_a_minus_header(self):
+        """A modified '-- a/…' line must still be blamed, not read as a header."""
+        self._write('notes.txt', 'intro\n-- a/legacy.txt\n++ b/legacy.txt\ntail\n')
+        self._commit('Commit A')
+        self._write('notes.txt', 'intro\n-- a/renamed.txt\n++ b/legacy.txt\ntail\n')
+        r = self._run('--dry-run')
+        self.assertEqual(r.returncode, 0)
+        self.assertIn('Commit A', r.stdout)
+
+    @requires_chunked
+    def test_removed_line_looking_like_a_minus_header_chunked(self):
+        """Same input, chunked mode: the hunk is attributable, nothing left over."""
+        self._write('notes.txt', 'intro\n-- a/legacy.txt\n++ b/legacy.txt\ntail\n')
+        self._commit('Commit A')
+        self._write('notes.txt', 'intro\n-- a/renamed.txt\n++ b/legacy.txt\ntail\n')
+        r = self._run('-c')
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertEqual(self._log_subjects(), ['fixup! Commit A', 'Commit A'])
+        self.assertEqual(self._git('diff', 'HEAD').stdout, '')
 
 
 if __name__ == '__main__':

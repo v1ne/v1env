@@ -34,6 +34,9 @@ fi
 
 # Git
 [ -e .gitconfig ] || ln -s $V1ENV/git/gitconfig .gitconfig
+if ! which gorun 2>&1 > /dev/null; then
+  go install github.com/erning/gorun@latest
+fi
 
 # gsettings
 if which gsettings 2>&1 > /dev/null; then

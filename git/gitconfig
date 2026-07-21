@@ -30,11 +30,11 @@
 
 [alias]
   # Auto-Fixup
-  af = !"${V1ENV}/git/auto-fixup.d"
+  af = !gorun "${V1ENV}/git/go/auto-fixup/main.go"
   # Auto-Rebase
-  ar = !"${V1ENV}/git/auto-rebase.d"
+  ar = !gorun "${V1ENV}/git/go/auto-rebase/main.go"
   # Auto-Rebase, Auto-Squash
-  ara = !"${V1ENV}/git/auto-rebase.d" -a
+  ara = !gorun "${V1ENV}/git/go/auto-rebase/main.go" -a
 
   # Branch
   ba = branch -a
