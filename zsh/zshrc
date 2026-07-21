@@ -216,6 +216,8 @@ zle -C complete-files complete-word _generic
 zstyle ':completion:complete-files:*' completer _files
 bindkey "^X^D" complete-files
 
+# history options
+setopt extended_history hist_find_no_dups hist_save_no_dups
 HISTFILE=~/.histfile
 HISTSIZE=20000
 SAVEHIST=20000
