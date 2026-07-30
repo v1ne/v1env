@@ -8,6 +8,7 @@ exec nm-applet --indicator
 
 
 exec swayidle -w \
+    idlehint 120 \
     timeout 300  'swaylock -f' \
     timeout 600  'swaymsg "output * power off"' \
       resume 'swaymsg "output * power on"' \
@@ -52,6 +53,8 @@ bindsym $mod+Shift+Return exec "alacritty --class floating"
 bindsym $mod+q kill
 
 # start dmenu (a program launcher)
+# Workaround until the X210Ai properly supports ISO keyboards. o.O
+bindsym Control_R exec fuzzel
 bindsym $mod+less exec fuzzel
 
 # change focus
@@ -190,7 +193,7 @@ mode "verbatim" {
 bindsym Super_L mode "verbatim"
 
 bar {
-	# output default	
+	# output default
 	mode dock
 	position bottom
 	swaybar_command waybar
