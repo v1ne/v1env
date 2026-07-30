@@ -199,6 +199,9 @@ bindkey -r '^W'
 bindkey '^W' backward-delete-tiny-word
 bindkey '^[d' delete-tiny-word
 bindkey '^[D' delete-word
+# Allow ^H after recalling a ^Z-deferred prompt to delete part of that prompt:
+bindkey -M viins '^?' backward-delete-char
+bindkey -M viins '^H' backward-delete-char
 
 
 # csh dabbrev-expand for zsh: <3
