@@ -64,14 +64,14 @@ fi
 setopt \
   append_history auto_cd no_auto_list \
   no_beep \
-  extended_glob \
+  no_extended_glob \
   hash_cmds hash_list_all hist_ignore_dups hist_ignore_space no_hup \
   interactive_comments \
   no_list_ambiguous list_types \
   no_match \
   no_notify \
   rc_expand_param \
-  no_rm_star_silent \
+  no_rm_star_silent
 
 # Prompt:
 if [[ -n "$SSH_CONNECTION" ]] ; then
@@ -80,6 +80,7 @@ else
   hostpart=''
 fi
 PROMPT="$hostpart"'%F{yellow}%(4~x...%B%3~x%B%~)%b%f %(0?:%F{green}%#%f:%F{red}%?!%f) '
+unset hostpart
 
 
 ####################
@@ -336,6 +337,3 @@ alias v1-sync-env="(cd \"$V1ENV\" && git pull-rebase-push && cd \"$V1ENVPRIVATE\
 alias lvared="IFS=\$'\n' vared" # vared with one line per entry for arrays
 alias lvim='vim *(.om[1]^D)' # edit newest file (excluding dot files)
 alias s="git status"
-
-# Treat ^,#,~ normally
-unsetopt EXTENDED_GLOB
