@@ -283,8 +283,14 @@ if [[ -z $COLORTERM ]]; then
 fi
 
 # Set my preferences:
-export EDITOR=`which vim`
-export PAGER="less -FRX"
+if (( $+commands[nvim] )); then
+  export EDITOR=nvim
+elif (( $+commands[vim] )); then
+  export EDITOR=vim
+fi
+# Flags go into $LESS: whatever exec()s $PAGER without a shell chokes on them.
+export PAGER=less
+export LESS='-FRX'
 
 
 ######################
