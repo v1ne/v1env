@@ -1,28 +1,28 @@
-if [[ "$V1ENV" == "" ]]; then
+if [[ -z $V1ENV ]]; then
   echo "ERROR: V1ENV not defined. Please point it to this v1env/zsh/zshrc."
 fi
-if [ -e "$V1ENV/../v1env-private" ]; then
+if [[ -d "$V1ENV/../v1env-private" ]]; then
   export V1ENVPRIVATE="$V1ENV/../v1env-private"
-  export LOCAL_VSCODE_USERJSON="$V1ENVPRIVATE/vscode/$(hostname).json"
-elif [ -e "$V1ENV/../env-private" ]; then
+  export LOCAL_VSCODE_USERJSON="$V1ENVPRIVATE/vscode/$HOST.json"
+elif [[ -d "$V1ENV/../env-private" ]]; then
   export V1ENVPRIVATE="$V1ENV/../env-private"
 else
   echo "ERROR: v1env/zsh/zshrc: Where is v1env-private?"
 fi
 
-SAVED_V1_OS="$V1_OS"
+SAVED_V1OS="$V1OS"
 . "$V1ENV/zsh/os"
 
-if [[ "$SAVED_V1_OS" == "" ]]; then
+if [[ -z $SAVED_V1OS ]]; then
   IS_FIRST_START=1
 fi
+unset SAVED_V1OS
 
 source_sh () {
-  emulate -LR sh
-  . "$@"
+  emulate -R sh -c 'source "$@"'
 }
 
-if [[ "$V1_LOAD_PROFILE" != "" || ( $V1OS == "Linux" && -e /etc/gentoo-release ) ]]; then
+if [[ -n $V1_LOAD_PROFILE || ( $V1OS == Linux && -e /etc/gentoo-release ) ]]; then
   # Load default config for environment variables, path setup
   source_sh /etc/profile
 fi
@@ -45,6 +45,7 @@ for mybin in "${HOME}/bin" "${HOME}/.local/bin"; do
     path=($mybin $path)
   fi
 done
+unset mybin
 
 # Add path elements to append:
 if [[ $V1OS == Linux ]] && ! (($path[(Ie)/sbin])); then
@@ -97,10 +98,9 @@ autoload -Uz colors ; colors
 zstyle ':completion:*:default' list-colors ${(s.:.)LS_COLORS}
 
 CACHE_PATH="$HOME/.zsh/cache/$HOST"
-[ -e $CACHE_PATH ] || mkdir -p $CACHE_PATH
+[[ -d "$CACHE_PATH" ]] || mkdir -p "$CACHE_PATH"
 zstyle ':completion::complete:*' use-cache on
-zstyle ':completion::complete:*' cache-path $CACHE_PATH
-unset CACHE_PATH
+zstyle ':completion::complete:*' cache-path "$CACHE_PATH"
 
 zstyle ':completion:*' expand 'yes' # /u/s/l^I -> /usr/src/linux
 zstyle ':completion:*' squeeze-slashes 'no' # don't remove trailing /
@@ -113,7 +113,8 @@ if [[ $V1OS == Linux ]]; then
   zstyle ':completion:*:kill:*' command 'ps x'
 fi
 
-autoload -Uz compinit; compinit
+autoload -Uz compinit; compinit -d "$CACHE_PATH/zcompdump-$ZSH_VERSION"
+unset CACHE_PATH
 
 
 #############
@@ -129,8 +130,7 @@ backward-delete-tiny-word() {
   local WORDCHARS="${_my_tiny_worchars}"
   zle .backward-delete-word
   # TODO: fooo -/bar^W^W deletes fooo, but shouldn't
-  # TODO: ] is missing in RE, how to escape this?
-  if [[ "${BUFFER[$CURSOR-1,CURSOR]}" =~ ' [*?_.~=/&;!#$%\^()\{\}<>-]' ]] then
+  if [[ "${BUFFER[$CURSOR-1,CURSOR]}" =~ ' []*?_.~=/&;!#$%^(){}<>-]' ]] then
     # delete sole / argument
     zle .vi-backward-delete-char
   fi
@@ -160,13 +160,26 @@ zle -N forward-tiny-word
 #### Key bindings ####
 ######################
 
-autoload -U up-line-or-beginning-search
+autoload -Uz up-line-or-beginning-search
 zle -N up-line-or-beginning-search
-autoload -U down-line-or-beginning-search
+autoload -Uz down-line-or-beginning-search
 zle -N down-line-or-beginning-search
 
 bindkey -v
-if [[ "$TERM" =~ "^xterm" || "$TERM" =~ "^rxvt" || "$TERM" =~ "^screen" || "$TERM" = "alacritty" ]]; then
+
+zmodload zsh/terminfo
+bindkey-terminfo() {
+  [[ -n ${terminfo[$1]} ]] && bindkey -M viins "${terminfo[$1]}" "$2"
+}
+bindkey-terminfo kcuu1 up-line-or-beginning-search   # up
+bindkey-terminfo kcud1 down-line-or-beginning-search # down
+bindkey-terminfo khome beginning-of-line
+bindkey-terminfo kend  end-of-line
+bindkey-terminfo kdch1 delete-char
+bindkey-terminfo kcbt  reverse-menu-complete # S-Tab reverses cycling
+unfunction bindkey-terminfo
+
+if [[ $TERM == (xterm|rxvt|screen|tmux|alacritty|foot)* ]]; then
   bindkey '^[Od' backward-tiny-word
   bindkey '^[[1;5D' backward-tiny-word # C-left
   bindkey '^[[1;6D' backward-word # C-S-left (broken on rxvt)
@@ -187,13 +200,11 @@ if [[ "$TERM" =~ "^xterm" || "$TERM" =~ "^rxvt" || "$TERM" =~ "^screen" || "$TER
   bindkey '^[[A' up-line-or-beginning-search # up
   bindkey '^[[B' down-line-or-beginning-search # down
   bindkey '^[[Z' reverse-menu-complete # S-Tab reverses cycling
-  if [[ "$TERM" =~ "^alacritty" || "$TERM" =~ "^xterm" ]]; then
+  if [[ $TERM == (alacritty|xterm)* ]]; then
     bindkey '^[^W' backward-delete-word # C-A-W
-    bindkey '^[OA' up-line-or-beginning-search # up (Gnome Terminal, Alacritty)
-    bindkey '^[OB' down-line-or-beginning-search # down
   fi
 else
-  echo "unknown terminal: $TERM; no special keys bound."
+  echo "unknown terminal: $TERM; only the terminfo key bindings are active."
 fi
 bindkey -r "^[" # no vi-cmd-mode with ESC!
 bindkey '^[' beep # no vi-cmd-mode with ESC!
@@ -240,15 +251,14 @@ SAVEHIST=20000
 
 ## Prevent somethings to occur in the history:
 zshaddhistory() {
+  emulate -L zsh
   local line=${1%%$'\n'}
-  local cmd=${line%% *}
 
-  [[ "${cmd}" != "youtube-dl" \
-  && "${cmd}" != "youtube-watch" \
-  && "${cmd}" != "mpv" \
-  && "${cmd}" != "histrm" \
-  && "${cmd}" != "pass" \
-  ]] && ! [[ "${line}" =~ '^cccc[a-z]{40,}$' ]] # Yubikey noise
+  case ${line%% *} in
+    youtube-dl|youtube-watch|mpv|histrm|pass) return 1 ;;
+  esac
+  [[ $line =~ '^cccc[a-z]{40,}$' ]] && return 1 # Yubikey noise
+  return 0
 }
 
 
@@ -258,16 +268,19 @@ zshaddhistory() {
 #########################
 #########################
 
-if [[ $V1OS == MSYS2 && "$IS_FIRST_START" != "" ]]; then
+if [[ $V1OS == MSYS2 && -n $IS_FIRST_START ]]; then
   . "$V1ENV/zsh/win"
 fi
+unset IS_FIRST_START
 
 
 ####################
 ##### Editor #######
 ####################
 
-export COLORTERM=1
+if [[ -z $COLORTERM ]]; then
+  export COLORTERM=1
+fi
 
 # Set my preferences:
 export EDITOR=`which vim`
@@ -291,12 +304,13 @@ export LC_NUMERIC=$DE
 export LC_TIME=$DE
 export LC_MESSAGES=$EN
 # GNU extensions:
-LC_ADDRESS=$DE
-LC_IDENTIFICATION=$EN
-LC_MEASUREMENT=$DE
-LC_NAME=$DE
-LC_PAPER=$DE
-LC_TELEPHONE=$DE
+export LC_ADDRESS=$DE
+export LC_IDENTIFICATION=$EN
+export LC_MEASUREMENT=$DE
+export LC_NAME=$DE
+export LC_PAPER=$DE
+export LC_TELEPHONE=$DE
+unset DE EN
 
 
 
@@ -333,7 +347,11 @@ if [[ $V1OS == Linux ]]; then
   alias emerge='emerge --nospinner'
 fi
 
-alias v1-sync-env="(cd \"$V1ENV\" && git pull-rebase-push && cd \"$V1ENVPRIVATE\" && git pull-rebase-push)" # Pull-Push V1ENV
+# Pull-Push V1ENV
+v1-sync-env() {
+  ( cd -- "$V1ENV" && git pull-rebase-push ) &&
+  ( cd -- "$V1ENVPRIVATE" && git pull-rebase-push )
+}
 alias lvared="IFS=\$'\n' vared" # vared with one line per entry for arrays
 alias lvim='vim *(.om[1]^D)' # edit newest file (excluding dot files)
 alias s="git status"
