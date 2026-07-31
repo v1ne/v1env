@@ -86,8 +86,13 @@ PROMPT="$hostpart"'%F{yellow}%(4~x...%B%3~x%B%~)%b%f %(0?:%F{green}%#%f:%F{red}%
 #### Completion ####
 ####################
 
-autoload -U colors ; colors
+if [[ $V1OS == Linux || $V1OS == MSYS2 ]]; then
+  # load LC_COLORS before usage:
+  eval "$(dircolors --sh "$V1ENV/dircolors/gnu-ls")"
+fi
 
+zmodload zsh/complist
+autoload -Uz colors ; colors
 zstyle ':completion:*:default' list-colors ${(s.:.)LS_COLORS}
 
 CACHE_PATH="$HOME/.zsh/cache/$HOST"
@@ -266,11 +271,6 @@ export COLORTERM=1
 # Set my preferences:
 export EDITOR=`which vim`
 export PAGER="less -FRX"
-
-if [[ $V1OS == Linux || $V1OS == MSYS2 ]]; then
-  COLORS="$V1ENV/dircolors/gnu-ls"
-  eval `dircolors --sh "$COLORS"`
-fi
 
 
 ######################
