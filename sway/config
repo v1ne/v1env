@@ -9,7 +9,7 @@ exec nm-applet --indicator
 
 exec swayidle -w \
     idlehint 120 \
-    timeout 300  'swaylock -f' \
+    timeout 300  'swaylock -fF' \
     timeout 600  'swaymsg "output * power off"' \
       resume 'swaymsg "output * power on"' \
     before-sleep "$V1ENV/sway/lid-guard.py lock" \
