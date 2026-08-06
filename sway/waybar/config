@@ -1,4 +1,4 @@
-// Waybar — v1env. Needs "Symbols Nerd Font" (nerd-fonts.symbols-only / https://github.com/ryanoasis/nerd-fonts/)
+// Waybar — v1env. Needs "Symbols Nerd Font" v3 (nerd-fonts.symbols-only / https://github.com/ryanoasis/nerd-fonts/)
 // for the glyphs; text falls back to JetBrains Mono. Colours live in style.css (Kimbie).
 {
     "layer": "top",
@@ -24,10 +24,10 @@
         "format-icons": { "activated": "", "deactivated": "" }
     },
     "pulseaudio": {
-        "format": "{volume}% {icon} {format_source}",
-        "format-bluetooth": "{volume}% {icon} {format_source}",
-        "format-bluetooth-muted": " {icon} {format_source}",
-        "format-muted": " {format_source}",
+        "format": "{volume:3}% {icon} {format_source}",
+        "format-bluetooth": "{volume:3}% {icon} {format_source}",
+        "format-bluetooth-muted": " {icon} {format_source}",
+        "format-muted": " {format_source}",
         "format-source": "",
         "format-source-muted": "",
         "format-icons": {
@@ -44,29 +44,29 @@
     },
     "network": {
         "format-wifi": "{essid} ({signalStrength}%) ",
-        "format-ethernet": "{ipaddr}/{cidr} ",
-        "format-linked": "{ifname} (No IP) ",
+        "format-ethernet": "{ipaddr}/{cidr} ",
+        "format-linked": "{ifname} (No IP) ",
         "format-disconnected": "Disconnected ⚠",
-        "tooltip-format": "{ifname} via {gwaddr} ",
+        "tooltip-format": "{ifname} via {gwaddr} ",
         "format-alt": "{ifname}: {ipaddr}/{cidr}",
         "on-click-right": "pgrep -x nm-applet >/dev/null || nm-applet"
     },
     "cpu": {
-        "format": "{usage}% 󰝨",
+        "format": "{usage:3}% ",
         "tooltip": false
     },
     "memory": {
-        "format": "{}% "
+        "format": "{:3}% "
     },
     "backlight": {
-        "format": "{percent}% {icon}",
+        "format": "{percent:3}% {icon}",
         "format-icons": ["", "", "", "", "", "", "", "", ""]
     },
     "battery": {
         "states": { "warning": 30, "critical": 15 },
-        "format": "{capacity}% {icon}",
-        "format-charging": "{capacity}% ",
-        "format-plugged": "{capacity}% ",
+        "format": "{capacity:3}% {icon}",
+        "format-charging": "{capacity:3}% ",
+        "format-plugged": "{capacity:3}% ",
         "format-alt": "{time} {icon}",
         "format-icons": ["", "", "", "", ""]
     },
