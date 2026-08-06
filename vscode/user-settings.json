@@ -16,9 +16,16 @@
         "<C-k>": false,
         "<C-p>": false,
         "<C-r>": true,
-        "<C-v>": false,
+        "<C-t>": false,
+        "<C-v>": true,
         "<C-w>": false
     },
+    "vim.insertModeKeyBindingsNonRecursive": [
+        {
+            "before": ["<C-v>"],
+            "commands": ["editor.action.clipboardPasteAction"]
+        }
+    ],
     "vim.normalModeKeyBindingsNonRecursive": [
         {
             "before": ["<C-w>"],
