@@ -74,7 +74,7 @@ fi
 # shikane
 if ! which shikane 2>&1 > /dev/null; then
   if which cargo 2>&1 > /dev/null; then
-    cargo install --locked shikane
+    cargo install --quiet --locked shikane
   else
     echo "Skipping shikane install: cargo not found"
   fi
