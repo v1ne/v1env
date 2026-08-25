@@ -21,13 +21,12 @@ if which darkman 2>&1 > /dev/null && ! [ -e .config/darkman ]; then
 fi
 
 # environment
-if ! [ -e .config/environment.d/50-local-bin.conf ]; then
-  # make .local/bin available to the compositor
-  mkdir -p .config/environment.d
-  cat > .config/environment.d/50-local-bin.conf << EOF
-PATH="\$PATH:\$HOME/.local/bin:\$HOME/.go/bin"
+# Sort above 99-environment.conf: /etc/environment assigns PATH absolutely.
+mkdir -p .config/environment.d
+rm -f .config/environment.d/50-local-bin.conf
+cat > .config/environment.d/995-local-bin.conf << EOF
+PATH="\$PATH:\$HOME/.local/bin:\$HOME/.go/bin:\$HOME/.cargo/bin"
 EOF
-fi
 if ! [ -e .config/environment.d/51-v1env.conf ]; then
   cat > .config/environment.d/51-v1env.conf << EOF
 V1ENV=$V1ENV
@@ -39,6 +38,8 @@ GOPATH="\${HOME}/.go"
 EOF
 export GOPATH="${HOME}/.go"
 fi
+# The user manager outlives a logout, so it would keep serving a stale PATH.
+systemctl --user daemon-reload
 
 # Git
 [ -e .gitconfig ] || ln -s $V1ENV/git/gitconfig .gitconfig
@@ -68,6 +69,21 @@ fi
 if ! [ -e .config/nvim ]; then
   mkdir -p .config/nvim
   ln -s $V1ENV/vim/init.vim .config/nvim/init.vim
+fi
+
+# shikane
+if ! which shikane 2>&1 > /dev/null; then
+  if which cargo 2>&1 > /dev/null; then
+    cargo install --locked shikane
+  else
+    echo "Skipping shikane install: cargo not found"
+  fi
+fi
+if ! [ -e .config/shikane ]; then
+  mkdir -p .config/shikane
+  SHIKANE_CFG=$V1ENV-private/shikane/$(hostname).toml
+  [ -e $SHIKANE_CFG ] || SHIKANE_CFG=$V1ENV/sway/shikane/default.toml
+  ln -s $SHIKANE_CFG .config/shikane/config.toml
 fi
 
 # Sway

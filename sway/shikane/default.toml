@@ -1,0 +1,25 @@
+# Host-independent fallback, symlinked by setup-machine.sh when
+# $V1ENV-private/shikane/$(hostname).toml does not exist.
+# Real per-host profiles live in the private repo; keep this one generic.
+
+# No position/scale here on purpose: sway lays outputs out left-to-right by
+# itself, and a hardcoded offset would be wrong on every machine but one.
+
+[[profile]]
+name = "builtin"
+exec = [ "$V1ENV/sway/lid.py sync" ]
+    [[profile.output]]
+    search = "n/^eDP-[0-9]+$"
+    enable = true
+
+[[profile]]
+name = "builtin + external"
+exec = [ "$V1ENV/sway/lid.py sync" ]
+    [[profile.output]]
+    search = "n/^eDP-[0-9]+$"
+    enable = true
+
+    [[profile.output]]
+    search = "n/^(DP|HDMI-A)-[0-9]+$"
+    enable = true
+    mode = "preferred"
