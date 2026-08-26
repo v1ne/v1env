@@ -6,6 +6,7 @@ exec "(sleep 1; ~/.local/share/darkman/mako.sh $(darkman get))&" # set the right
 exec_always ~/.local/share/darkman/sway.sh
 exec nm-applet --indicator
 # Add a layout: arrange with wdisplays, then `shikanectl export "<name>"`
+exec_always "pgrep -x shikane > /dev/null && shikanectl reload"
 exec shikane
 
 
