@@ -5,15 +5,18 @@ exec mako
 exec "(sleep 1; ~/.local/share/darkman/mako.sh $(darkman get))&" # set the right scheme after login
 exec_always ~/.local/share/darkman/sway.sh
 exec nm-applet --indicator
+exec "$V1ENV/sway/waybar.sh"
 # Add a layout: arrange with wdisplays, then `shikanectl export "<name>"`
-exec_always "pgrep -x shikane > /dev/null && shikanectl reload"
-exec shikane
+# Restart, don't `shikanectl reload`: reload is dropped while a variant is mid-apply.
+exec_always "pkill -x shikane; shikane"
+# A clobbered layout changes no head identity, so shikane never notices it.
+exec_always "$V1ENV/sway/lid.py watch"
 
 
 exec swayidle -w \
     idlehint 120 \
     timeout 300  'swaylock -fF' \
-    timeout 600  'swaymsg "output * power off"' \
+    timeout 600  "$V1ENV/sway/lid.py blank" \
       resume "$V1ENV/sway/lid.py wake" \
     before-sleep "$V1ENV/sway/lid.py lock" \
     after-resume "$V1ENV/sway/lid.py maybe-unlock"
@@ -200,13 +203,6 @@ mode "verbatim" {
 
 bindsym Super_L mode "verbatim"
 
-bar {
-	# output default
-	mode dock
-	position bottom
-	swaybar_command waybar
-	tray_output primary
-}
 
 #bar {
 #	output DP-0
