@@ -88,17 +88,24 @@ unset hostpart
 #### Completion ####
 ####################
 
+CACHE_PATH="$HOME/.zsh/cache/$HOST"
+[[ -d "$CACHE_PATH" ]] || mkdir -p "$CACHE_PATH"
+
 if [[ $V1OS == Linux || $V1OS == MSYS2 ]]; then
-  # load LC_COLORS before usage:
-  eval "$(dircolors --sh "$V1ENV/dircolors/gnu-ls")"
+  # load LC_COLORS before loading the zsh "colors" module
+  #
+  ls_colors="$CACHE_PATH/ls-colors.zsh"
+  if [[ ! -s $ls_colors || $V1ENV/dircolors/gnu-ls -nt $ls_colors ]]; then
+    dircolors --sh "$V1ENV/dircolors/gnu-ls" >| "$ls_colors"
+  fi
+  [[ -s $ls_colors ]] && source "$ls_colors"
+  unset ls_colors
 fi
 
 zmodload zsh/complist
 autoload -Uz colors ; colors
 zstyle ':completion:*:default' list-colors ${(s.:.)LS_COLORS}
 
-CACHE_PATH="$HOME/.zsh/cache/$HOST"
-[[ -d "$CACHE_PATH" ]] || mkdir -p "$CACHE_PATH"
 zstyle ':completion::complete:*' use-cache on
 zstyle ':completion::complete:*' cache-path "$CACHE_PATH"
 
@@ -113,8 +120,19 @@ if [[ $V1OS == Linux ]]; then
   zstyle ':completion:*:kill:*' command 'ps x'
 fi
 
-autoload -Uz compinit; compinit -d "$CACHE_PATH/zcompdump-$ZSH_VERSION"
-unset CACHE_PATH
+# Cache zcompdump/compaudit result to speed up the start
+autoload -Uz compinit
+zcompdump="$CACHE_PATH/zcompdump-$ZSH_VERSION"
+fpath_key="${(j.:.)${(@)fpath:A}}"
+fresh_dump=( $zcompdump(N.mw-1) )
+if (( $#fresh_dump )) && [[ -r $zcompdump.fpath && "$(<$zcompdump.fpath)" == $fpath_key ]]; then
+  compinit -C -d "$zcompdump"
+else
+  rm -f "$zcompdump"
+  compinit -d "$zcompdump"
+  print -r -- "$fpath_key" >| "$zcompdump.fpath"
+fi
+unset CACHE_PATH zcompdump fpath_key fresh_dump
 
 
 #############
