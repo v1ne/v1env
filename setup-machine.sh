@@ -22,11 +22,19 @@ fi
 
 # environment
 # Sort above 99-environment.conf: /etc/environment assigns PATH absolutely.
+# Nix, where present, needs listing too: /etc/profile.d/nix.sh is login-shell-only,
+# but gdm-wayland-session execs sway directly, so a GUI session would never see
+# nix-only tools (waybar, darkman). Last in PATH, so system binaries win.
 mkdir -p .config/environment.d
 rm -f .config/environment.d/50-local-bin.conf
+EXTRA_PATH=""
+for dir in "$HOME/.nix-profile/bin" /nix/var/nix/profiles/default/bin; do
+  [ -d "$dir" ] && EXTRA_PATH="$EXTRA_PATH:$dir"
+done
 cat > .config/environment.d/995-local-bin.conf << EOF
-PATH="\$PATH:\$HOME/.local/bin:\$HOME/.go/bin:\$HOME/.cargo/bin"
+PATH="\$PATH:\$HOME/.local/bin:\$HOME/.go/bin:\$HOME/.cargo/bin$EXTRA_PATH"
 EOF
+unset EXTRA_PATH
 if ! [ -e .config/environment.d/51-v1env.conf ]; then
   cat > .config/environment.d/51-v1env.conf << EOF
 V1ENV=$V1ENV
